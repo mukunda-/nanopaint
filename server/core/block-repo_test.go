@@ -4,19 +4,12 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 package core
 
-type (
-	BlockService interface {
-		GetBlock(coords BlockCoords) (Block, error)
-		SetPixel(coords BlockCoords, color Color)
-	}
+func TestBlockRepo(t *testing.T) {
+	app := fxtest.New(
+		fx.Provide(CreateTestBlockRepo),
+	).RequireStart()
 
-	dbBlockService struct {}
-)
+	defer app.RequireStop()
 
-func CreateDbBlockService() BlockService {
-	return &dbBlockService{}
-}
-
-func (s *dbBlockService) GetBlock(coords BlockCoords) (Block, error) {
 
 }

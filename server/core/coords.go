@@ -5,18 +5,13 @@
 package core
 
 type (
-	BlockService interface {
-		GetBlock(coords BlockCoords) (Block, error)
-		SetPixel(coords BlockCoords, color Color)
-	}
-
-	dbBlockService struct {}
+	BlockCoords byte[]
 )
 
-func CreateDbBlockService() BlockService {
-	return &dbBlockService{}
+func (c BlockCoords) Parent() BlockCoords {
+	return c[:len(c)-1]
 }
 
-func (s *dbBlockService) GetBlock(coords BlockCoords) (Block, error) {
-
+func (c BlockCoords) Child(x, y uint8) BlockCoords {
+	return append(c, x + (y << 3))
 }

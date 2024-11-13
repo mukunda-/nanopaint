@@ -5,18 +5,19 @@
 package core
 
 type (
-	BlockService interface {
+	Color uint32
+
+	Pixel struct {
+		Color   Color
+		DryTime PixelTime
+	}
+
+	Block struct {
+		Pixels [8*8]Pixel
+	}
+
+	BlockRepo interface {
 		GetBlock(coords BlockCoords) (Block, error)
 		SetPixel(coords BlockCoords, color Color)
 	}
-
-	dbBlockService struct {}
 )
-
-func CreateDbBlockService() BlockService {
-	return &dbBlockService{}
-}
-
-func (s *dbBlockService) GetBlock(coords BlockCoords) (Block, error) {
-
-}
