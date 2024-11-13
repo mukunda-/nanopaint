@@ -7,18 +7,18 @@ package core
 // A block repository that doesn't use persistent storage (in-memory). For testing.
 
 type (
-	TestBlockRepo struct {
+	MemBlockRepo struct {
 		Blocks map[BlockCoords]Block
 	}
 )
 
-func CreateTestBlockRepo() BlockRepo {
-	return &TestBlockRepo{
+func CreateMemBlockRepo() BlockRepo {
+	return &MemBlockRepo{
 		Blocks: make(map[BlockCoords]Block),
 	}
 }
 
-func (r *TestBlockRepo) GetBlock(coords BlockCoords) (Block, error) {
+func (r *MemBlockRepo) GetBlock(coords BlockCoords) (Block, error) {
 	block, ok := r.Blocks[coords]
 	if !ok {
 		return Block{}, nil
