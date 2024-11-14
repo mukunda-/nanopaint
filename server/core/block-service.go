@@ -1,16 +1,16 @@
-//////////////////////////////////////////////////////////////////////////////////////////
+// ///////////////////////////////////////////////////////////////////////////////////////
 // Nanopaint (C) 2024 Mukunda Johnson (me@mukunda.com)
 // Distributed under the MIT license. See LICENSE.txt for details.
-//////////////////////////////////////////////////////////////////////////////////////////
+// ///////////////////////////////////////////////////////////////////////////////////////
 package core
 
 type (
 	BlockService interface {
 		GetBlock(coords BlockCoords) (Block, error)
-		SetPixel(coords BlockCoords, color Color)
+		SetPixel(coords BlockCoords, color Color) error
 	}
 
-	dbBlockService struct {}
+	dbBlockService struct{}
 )
 
 func CreateDbBlockService() BlockService {
@@ -18,5 +18,9 @@ func CreateDbBlockService() BlockService {
 }
 
 func (s *dbBlockService) GetBlock(coords BlockCoords) (Block, error) {
+	panic("not implemented")
+}
 
+func (s *dbBlockService) SetPixel(coords BlockCoords, color Color) error {
+	panic("not implemented")
 }
