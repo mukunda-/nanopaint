@@ -21,8 +21,9 @@ func CreateMemBlockRepo(cs ClockService) BlockRepo {
 	blocks := make(map[string]*Block)
 	blocks[""] = &Block{}
 	return &MemBlockRepo{
-		Clock:  cs,
-		Blocks: blocks,
+		Clock:   cs,
+		Blocks:  blocks,
+		DryTime: make(map[string]int64),
 	}
 }
 
@@ -30,7 +31,7 @@ func CreateMemBlockRepo(cs ClockService) BlockRepo {
 func (r *MemBlockRepo) GetBlock(coords BlockCoords) (*Block, error) {
 	block, ok := r.Blocks[coords.ToString()]
 	if !ok {
-		return &Block{}, ErrBlockNotFound
+		return nil, ErrBlockNotFound
 	}
 	return block, nil
 }
@@ -56,10 +57,7 @@ func (r *MemBlockRepo) bubbleColor(coords BlockCoords) {
 		}
 
 		pixelCoords := coords[len(coords)-1]
-		parent.Pixels[pixelCoords] = Pixel{
-			Color: average,
-			Dry:   true,
-		}
+		parent.Pixels[pixelCoords] = PIXEL_DRY | PIXEL_PAINTED | Pixel(average)
 
 		coords = parentCoords
 		block = parent
@@ -67,28 +65,60 @@ func (r *MemBlockRepo) bubbleColor(coords BlockCoords) {
 }
 
 // ---------------------------------------------------------------------------------------
+func (r *MemBlockRepo) getOrCreateBlock(coords BlockCoords) (*Block, error) {
+	block, err := r.GetBlock(coords)
+	if err == ErrBlockNotFound {
+		blockParent, err := r.GetBlock(coords.Parent())
+		if err == ErrBlockNotFound {
+			return nil, ErrBadCoords
+		} else if err != nil {
+			return nil, err
+		}
+
+		// Check if the parent pixel is dry.
+		pixelCoord := coords[len(coords)-1]
+		parentPixel := blockParent.Pixels[pixelCoord]
+		if parentPixel&PIXEL_DRY != 0 {
+			// If the parent pixel is dry, then we can create the block and save it.
+			block = &Block{}
+			r.Blocks[coords.ToString()] = block
+
+			// Initialize the color to the parent pixel.
+			for i := range block.Pixels {
+				block.Pixels[i] = Pixel(parentPixel & PIXEL_COLOR_MASK)
+			}
+		} else {
+			// Not dry yet.
+			return nil, ErrBadCoords
+		}
+	} else if err != nil {
+		return nil, err
+	}
+
+	return block, nil
+}
+
+// ---------------------------------------------------------------------------------------
 func (r *MemBlockRepo) SetPixel(coords BlockCoords, color Color) error {
 	if len(coords) == 0 {
 		return ErrBadCoords
 	}
+	if Pixel(color)&PIXEL_FLAG_MASK != 0 {
+		panic("invalid color value")
+	}
 
 	parentCoords := coords.Parent()
-	parent, err := r.GetBlock(parentCoords)
-	if err == ErrBlockNotFound {
-		return ErrBadCoords
-	} else if err != nil {
+	parent, err := r.getOrCreateBlock(parentCoords)
+	if err != nil {
 		return err
 	}
 
 	pixelCoord := coords[len(coords)-1]
-	if parent.Pixels[pixelCoord].Dry {
+	if parent.Pixels[pixelCoord]&PIXEL_DRY != 0 {
 		return ErrPixelIsDry
 	}
 
-	parent.Pixels[pixelCoord] = Pixel{
-		Color: color,
-		Dry:   false,
-	}
+	parent.Pixels[pixelCoord] = Pixel(color) | PIXEL_PAINTED
 	r.DryTime[coords.ToString()] = r.Clock.Now().Unix()
 
 	r.bubbleColor(parentCoords)
@@ -100,16 +130,15 @@ func (r *MemBlockRepo) SetPixel(coords BlockCoords, color Color) error {
 func (r *MemBlockRepo) DryPixels() {
 	for index, dryTime := range r.DryTime {
 		coords := CoordsFromString(index)
-		if r.Clock.Now().Unix()-dryTime > int64(GetDryTime(coords)) {
+		if r.Clock.Now().Unix()-dryTime >= int64(GetDryTime(coords)) {
 			coords := CoordsFromString(index)
-			block, err := r.GetBlock(coords)
+			block, err := r.GetBlock(coords.Parent())
 			if err != nil {
 				panic("block missing in tree")
 			}
 
-			for i := range block.Pixels {
-				block.Pixels[i].Dry = true
-			}
+			pixelCoord := coords[len(coords)-1]
+			block.Pixels[pixelCoord] = block.Pixels[pixelCoord] | PIXEL_DRY
 
 			// It is safe to delete during range for.
 			delete(r.DryTime, index)

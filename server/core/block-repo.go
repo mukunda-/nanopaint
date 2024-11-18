@@ -8,11 +8,10 @@ import "errors"
 
 type (
 	Color uint32
-
-	Pixel struct {
-		Color Color
-		Dry   bool
-	}
+	Pixel uint32
+	// Pixel structure:
+	// FFBBGGRR
+	// See PIXEL_* flags
 
 	Block struct {
 		Pixels [8 * 8]Pixel
@@ -42,12 +41,26 @@ var (
 	DRY_TIME = []int{0, 15, 30, 60, 150, 300, 600}
 )
 
+const (
+	// Pixel flags.
+
+	// The pixel is dry and a sub-block can be made.
+	PIXEL_DRY Pixel = 0x80 << 24
+
+	// This is to help clients realize that a pixel is wet and going to dry later.
+	// As opposed to not knowing if the pixel was set or inherited.
+	PIXEL_PAINTED Pixel = 0x40 << 24
+
+	PIXEL_FLAG_MASK  Pixel = 0xFF000000
+	PIXEL_COLOR_MASK Pixel = 0xFFFFFF
+)
+
 // ---------------------------------------------------------------------------------------
 func (bl *Block) GetAverage() Color {
 	var sum int64
 	for _, pixel := range bl.Pixels {
-		sum += int64(pixel.Color & 0xFF00FF)     // Blue and Red
-		sum += int64(pixel.Color&0x00FF00) << 24 // Green
+		sum += int64(pixel & 0xFF00FF)     // Blue and Red
+		sum += int64(pixel&0x00FF00) << 24 // Green
 	}
 	// Apply rounding.
 	// 32 + (32 << 16) + (32 << 32)

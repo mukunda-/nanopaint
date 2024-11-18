@@ -2,6 +2,10 @@
 // Nanopaint (C) 2024 Mukunda Johnson (me@mukunda.com)
 // Distributed under the MIT license. See LICENSE.txt for details.
 // ///////////////////////////////////////////////////////////////////////////////////////
+// ///////////////////////////////////////////////////////////////////////////////////////
+// Nanopaint (C) 2024 Mukunda Johnson (me@mukunda.com)
+// Distributed under the MIT license. See LICENSE.txt for details.
+// ///////////////////////////////////////////////////////////////////////////////////////
 package core
 
 import (
@@ -10,7 +14,15 @@ import (
 
 // ///////////////////////////////////////////////////////////////////////////////////////
 func TestMemBlockRepo(t *testing.T) {
-	clock := CreateTestClockService()
-	repo := CreateMemBlockRepo(clock)
-	testBlockRepo(t, repo, clock.(*TestClockService))
+	{
+		clock := CreateTestClockService()
+		repo := CreateMemBlockRepo(clock)
+		testBlockRepoSetGet(t, repo, clock.(*TestClockService))
+	}
+
+	{
+		clock := CreateTestClockService()
+		repo := CreateMemBlockRepo(clock)
+		testBlockRepoDryTime(t, repo, clock.(*TestClockService))
+	}
 }
