@@ -4,6 +4,8 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 package core
 
+import "fmt"
+
 // A block repository that doesn't use persistent storage (in-memory). For testing.
 // Single threaded. Not thread safe.
 
@@ -18,6 +20,8 @@ type (
 
 // ---------------------------------------------------------------------------------------
 func CreateMemBlockRepo(cs ClockService) BlockRepo {
+	log.WithField(nil, "clock", fmt.Sprintf("%T", cs)).
+		Debugln("Creating MemBlockRepo")
 	blocks := make(map[string]*Block)
 	blocks[""] = &Block{}
 	return &MemBlockRepo{
@@ -128,6 +132,8 @@ func (r *MemBlockRepo) SetPixel(coords BlockCoords, color Color) error {
 
 // ---------------------------------------------------------------------------------------
 func (r *MemBlockRepo) DryPixels() {
+	log.Debugln(nil, "Drying pixels.")
+
 	for index, dryTime := range r.DryTime {
 		coords := CoordsFromString(index)
 		if r.Clock.Now().Unix()-dryTime >= int64(GetDryTime(coords)) {
@@ -137,6 +143,7 @@ func (r *MemBlockRepo) DryPixels() {
 				panic("block missing in tree")
 			}
 
+			log.Debugln(nil, "Dried: "+index)
 			pixelCoord := coords[len(coords)-1]
 			block.Pixels[pixelCoord] = block.Pixels[pixelCoord] | PIXEL_DRY
 
