@@ -30,7 +30,7 @@ test2_section:
 `)
 
 func TestYamlConfig(t *testing.T) {
-	config := CreateYamlConfigFromContent(testYaml1)
+	config := CreateConfigFromYamlContent(testYaml1)
 
 	var cfg struct {
 		String1 string
@@ -58,4 +58,14 @@ func TestYamlConfig(t *testing.T) {
 	assert.Equal(t, 4.1, cfg.Float2)
 	assert.Equal(t, true, cfg.Bool1)
 	assert.Equal(t, false, cfg.Bool2)
+}
+
+func TestInvalidYaml(t *testing.T) {
+
+	config := CreateConfigFromYamlContent([]byte(`{{{{{{`))
+
+	assert.NotPanics(t, func() {
+		var result struct{}
+		config.Load("test1_section", &result)
+	})
 }

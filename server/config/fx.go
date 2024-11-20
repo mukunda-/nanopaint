@@ -6,12 +6,24 @@ import (
 
 func ProvideFromYamlString(content string) fx.Option {
 	return fx.Provide(func() Config {
-		return CreateYamlConfigFromContent([]byte(content))
+		return CreateConfigFromYamlContent([]byte(content))
 	})
 }
 
 func ProvideFromYamlFile(path string) fx.Option {
 	return fx.Provide(func() Config {
-		return CreateYamlConfigFromFile(path)
+		return CreateConfigFromYamlFile(path)
+	})
+}
+
+func ProvideFromJsonString(content string) fx.Option {
+	return fx.Provide(func() Config {
+		return CreateConfigFromJsonContent([]byte(content))
+	})
+}
+
+func ProvideFromJsonFile(path string) fx.Option {
+	return fx.Provide(func() Config {
+		return CreateConfigFromJsonFile(path)
 	})
 }

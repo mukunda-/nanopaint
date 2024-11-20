@@ -7,33 +7,31 @@ package config
 import (
 	"encoding/json"
 	"os"
-
-	"gopkg.in/yaml.v3"
 )
 
-type yamlConfig struct {
+type jsonConfig struct {
 	content []byte
 }
 
 // ---------------------------------------------------------------------------------------
-func CreateConfigFromYamlContent(content []byte) Config {
-	config := yamlConfig{
-		content: content,
-	}
-
-	// Ignore the content if it's not valid.
-	var result struct{}
-	err := yaml.Unmarshal(content, &result)
+func CreateConfigFromJsonContent(content []byte) Config {
+	var result any
+	err := json.Unmarshal(content, &result)
 	if err != nil {
 		log.WithError(nil, err).Errorln("Error reading config file.")
-		config.content = []byte("{}")
+		return &jsonConfig{
+			content: []byte("{}"),
+		}
 	}
 
+	config := jsonConfig{
+		content: content,
+	}
 	return &config
 }
 
 // ---------------------------------------------------------------------------------------
-func CreateConfigFromYamlFile(path string) Config {
+func CreateConfigFromJsonFile(path string) Config {
 
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -42,16 +40,16 @@ func CreateConfigFromYamlFile(path string) Config {
 		return &yamlConfig{}
 	}
 
-	return CreateConfigFromYamlContent(content)
+	return CreateConfigFromJsonContent(content)
 }
 
 // ---------------------------------------------------------------------------------------
-func (yc *yamlConfig) Load(key string, result any) {
+func (yc *jsonConfig) Load(key string, result any) {
 	allContent := make(map[string]interface{})
-	err := yaml.Unmarshal(yc.content, &allContent)
+	err := json.Unmarshal(yc.content, &allContent)
 
 	if err != nil {
-		// Invalid configuration is not allowed (we catch bad YAML during creation).
+		// Invalid configuration is not allowed (we catch bad JSON during creation).
 		panic("unexpected error reading config: " + err.Error())
 	}
 
