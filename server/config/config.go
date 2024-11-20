@@ -2,22 +2,27 @@
 // Nanopaint (C) 2024 Mukunda Johnson (me@mukunda.com)
 // Distributed under the MIT license. See LICENSE.txt for details.
 // ///////////////////////////////////////////////////////////////////////////////////////
-// Application-wide config from environment.
 package config
 
 import (
-	"strings"
-
 	"go.mukunda.com/nanopaint/common"
 )
 
 var log = common.GetLogger("config")
 
 // ---------------------------------------------------------------------------------------
-type Config struct {
+type Config interface {
+	//
+	Load(key string, result any)
+	//Get(key string) string
+	//Set(key string, value string)
+}
+
+type basicConfig struct {
 	Keys map[string]string
 }
 
+/*
 var config Config
 
 // ---------------------------------------------------------------------------------------
@@ -37,6 +42,5 @@ func setConfig(key string, value string) {
 
 // ---------------------------------------------------------------------------------------
 func init() {
-	config.Keys = make(map[string]string)
 	setConfig("test", "test-value")
-}
+}*/

@@ -1,14 +1,9 @@
 package config
 
-import (
-	"fmt"
-	"os"
-
-	"gopkg.in/yaml.v3"
-)
-
+/*
 type yamlSection = map[string]any
 
+// ---------------------------------------------------------------------------------------
 func appendYamlPrefix(a string, b string) string {
 	if a == "" {
 		return b
@@ -52,3 +47,4 @@ func ImportYamlFile(path string) {
 
 	ImportYamlContent(yamlFile)
 }
+*/

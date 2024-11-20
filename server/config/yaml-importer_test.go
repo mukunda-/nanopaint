@@ -1,11 +1,6 @@
 package config
 
-import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-)
-
+/*
 func TestYamlImport(t *testing.T) {
 	ImportYamlContent([]byte(`
 test1_a: a #comment
@@ -33,3 +28,4 @@ test1_f:
 	assert.Equal(t, "33", Get("test1_f.test1_c"))
 
 }
+*/

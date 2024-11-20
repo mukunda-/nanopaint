@@ -5,16 +5,12 @@
 package api
 
 import (
-	"github.com/labstack/echo/v4"
-	"go.mukunda.com/nanopaint/common"
+	"strconv"
+	"testing"
+
+	"go.mukunda.com/nanopaint/test"
 )
 
-var log = common.GetLogger("http")
-
-type Ct = echo.Context
-type Controller any
-
-type basicResponse struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
+func testreq(t *testing.T, hs HttpService) *test.Request {
+	return test.MakeRequest(t, "http://localhost:"+strconv.Itoa(hs.GetPort()))
 }
