@@ -40,3 +40,30 @@ func TestTestClockService(t *testing.T) {
 	tcs.SetTime(testTime)
 	assert.EqualValues(t, 1704110400, svc.Now().Unix())
 }
+
+// ///////////////////////////////////////////////////////////////////////////////////////
+func TestTestClockThreadSafety(t *testing.T) {
+	/////////////////////////////////
+	// The test clock is thread safe.
+
+	// Stress test:
+	// See if advancing works as expected when advancing from 1000 threads.
+	tc := CreateTestClockService().(*TestClockService)
+
+	startTime := tc.Now()
+
+	done := make(chan bool, 1000)
+
+	for i := 0; i < 1000; i++ {
+		go func() {
+			tc.Advance(time.Second)
+			done <- true
+		}()
+	}
+
+	for i := 0; i < 1000; i++ {
+		<-done
+	}
+
+	assert.Equal(t, startTime.Add(time.Second*1000).Unix(), tc.Now().Unix())
+}

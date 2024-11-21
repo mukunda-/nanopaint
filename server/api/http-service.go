@@ -12,6 +12,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"go.mukunda.com/nanopaint/config"
+	"go.mukunda.com/nanopaint/core"
 	"go.uber.org/fx"
 )
 
@@ -20,6 +21,7 @@ type HttpService interface {
 	GetPort() int
 	Router() Router
 	Echo() *echo.Echo
+	UseRateLimiter() echo.MiddlewareFunc
 }
 
 // ---------------------------------------------------------------------------------------
@@ -31,7 +33,9 @@ type Router interface {
 }
 
 type httpConfig struct {
-	Port int
+	Port            int `yaml:"port"`
+	RateLimitPeriod int `yaml:"rateLimitPeriod"`
+	RateLimitBurst  int `yaml:"rateLimitBurst"`
 }
 
 // ---------------------------------------------------------------------------------------
@@ -42,6 +46,7 @@ type httpService struct {
 	server      *http.Server
 	listener    net.Listener
 	config      httpConfig
+	rateLimiter RateLimiter
 }
 
 // ---------------------------------------------------------------------------------------
@@ -66,13 +71,14 @@ func createServer(e *echo.Echo, port int) (*http.Server, net.Listener, int) {
 }
 
 // ---------------------------------------------------------------------------------------
-func CreateHttpService(lc fx.Lifecycle, config config.Config) HttpService {
+func CreateHttpService(lc fx.Lifecycle, config config.Config, clock core.ClockService) HttpService {
 	log.Infoln(nil, "Creating HTTP Service.")
 	hs := &httpService{
 		E:           echo.New(),
 		closeSignal: make(chan int),
 	}
 	config.Load("http", &hs.config)
+	hs.rateLimiter = CreateRateLimiter(hs.config.RateLimitPeriod, hs.config.RateLimitBurst, clock)
 	hs.server, hs.listener, hs.Port = createServer(hs.E, hs.config.Port)
 
 	lc.Append(fx.Hook{
@@ -128,4 +134,24 @@ func (hs *httpService) Echo() *echo.Echo {
 // Get the Router (partial interface from Echo) for controllers to add routes.
 func (hs *httpService) Router() Router {
 	return hs.E
+}
+
+func (hs *httpService) UseRateLimiter() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			ip := c.RealIP()
+			if ip == "" {
+				ip = c.Request().RemoteAddr
+			}
+
+			if !hs.rateLimiter.Allow(ip) {
+				return c.JSON(429, basicResponse{
+					Code:    "RATE_LIMIT",
+					Message: "Rate limit exceeded.",
+				})
+			}
+
+			return next(c)
+		}
+	}
 }
