@@ -16,9 +16,11 @@ import (
 	"go.uber.org/fx/fxtest"
 )
 
-type testErrorsController struct{}
-
 func TestErrorsMiddleware(t *testing.T) {
+	/////////////////////////////////////////////////////////
+	// When the cat module handles a controlled error, we translate it into an HTTP
+	// response.
+	//
 	var hs HttpService
 	app := fxtest.New(t,
 
@@ -32,33 +34,39 @@ func TestErrorsMiddleware(t *testing.T) {
 			hs = phs
 			hs.Router().POST("/test/:type", func(c Ct) error {
 
-				type httpMessage struct {
-					Code    string `json:"code"`
-					Message string `json:"message,omitempty"`
-				}
-
 				// Testing the different error wrappers to make sure that we wrap the result
 				// properly. Also does some additional testing against the cat module,
 				// irrelevant to our middleware.
 				t := c.Param("type")
 				switch t {
 				case "bad1":
+					// Arguemnt errors become 400 bad request.
 					cat.BadIf(false, "not bad request text")
 					cat.BadIf(true, "bad request text")
 				case "custom1":
+					// Custom HTTP errors created with Echo can be used directly with catch.
+					// They will be forwarded to the response, so, for example, you can panic
+					// with an Echo error and it will be displayed to the user.
 					cat.Catch(false, echo.NewHTTPError(499, "not used"))
 					cat.Catch(true,
-						echo.NewHTTPError(499, httpMessage{"CUSTOM1", "499 custom1"}))
+						echo.NewHTTPError(499, baseResponse{"CUSTOM1", "499 custom1"}))
 				case "bubble-error":
+					// Bubble is a convenience catch to stop execution if an error is detected.
+					// These raise http 500 errors and give a generic response to the user
+					// The error is logged.
 					cat.Bubble(nil)
 					cat.Bubble(errors.New("test bubble-error (not shown in response)"))
 				case "ise":
+					// Catching general conditions raises a 500 internal server error and
+					// the text is not shown to the user (logged internally).
 					cat.Catch(false, "not ise error")
 					cat.Catch(true, "ise error (this is not shown in the response)")
 				case "denied1":
+					// PermissionErrors will show as 403 forbidden with the provided message.
 					cat.DenyIf(false, "denied0")
 					cat.DenyIf(true, "denied1")
 				case "notfound1":
+					// NotFound errors will show as 404 Not Found with the provided message.
 					cat.NotFoundIf(false, "notfound0")
 					cat.NotFoundIf(true, "notfound1")
 				}

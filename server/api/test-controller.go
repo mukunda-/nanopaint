@@ -27,7 +27,7 @@ func CreateTestController(routes Router, hs HttpService) TestController {
 
 // ---------------------------------------------------------------------------------------
 func (tc *testController) GetTest(c Ct) error {
-	return c.JSON(200, basicResponse{
+	return c.JSON(200, baseResponse{
 		Code:    "TEST",
 		Message: "Test GET endpoint.",
 	})
@@ -35,7 +35,7 @@ func (tc *testController) GetTest(c Ct) error {
 
 // ---------------------------------------------------------------------------------------
 func (tc *testController) PostTest(c Ct) error {
-	return c.JSON(200, basicResponse{
+	return c.JSON(200, baseResponse{
 		Code:    "TEST",
 		Message: "Test POST endpoint.",
 	})
@@ -43,7 +43,7 @@ func (tc *testController) PostTest(c Ct) error {
 
 // ---------------------------------------------------------------------------------------
 func (tc *testController) PutTest(c Ct) error {
-	return c.JSON(200, basicResponse{
+	return c.JSON(200, baseResponse{
 		Code:    "TEST",
 		Message: "Test PUT endpoint.",
 	})
@@ -51,7 +51,7 @@ func (tc *testController) PutTest(c Ct) error {
 
 // ---------------------------------------------------------------------------------------
 func (tc *testController) DeleteTest(c Ct) error {
-	return c.JSON(200, basicResponse{
+	return c.JSON(200, baseResponse{
 		Code:    "TEST",
 		Message: "Test DELETE endpoint.",
 	})
@@ -59,7 +59,7 @@ func (tc *testController) DeleteTest(c Ct) error {
 
 // ---------------------------------------------------------------------------------------
 func (tc *testController) PostTestRateLimit(c Ct) error {
-	return c.JSON(200, basicResponse{
+	return c.JSON(200, baseResponse{
 		Code:    "TEST",
 		Message: "Test rate limit endpoint.",
 	})

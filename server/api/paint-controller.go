@@ -4,7 +4,12 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 package api
 
-import "go.mukunda.com/nanopaint/core"
+import (
+	"regexp"
+
+	"go.mukunda.com/nanopaint/cat"
+	"go.mukunda.com/nanopaint/core"
+)
 
 type PaintController interface {
 	GetBlock(c Ct) error
@@ -14,6 +19,8 @@ type PaintController interface {
 type paintController struct {
 	blocks core.BlockService
 }
+
+var reValidCoords = regexp.MustCompile(`[0-9A-Za-z_-]*`)
 
 // ---------------------------------------------------------------------------------------
 func CreatePaintController(routes Router, blocks core.BlockService, hs HttpService) PaintController {
@@ -29,7 +36,8 @@ func CreatePaintController(routes Router, blocks core.BlockService, hs HttpServi
 
 // ---------------------------------------------------------------------------------------
 func (pc *paintController) GetBlock(c Ct) error {
-	//coords := c.Param("coords")
+	coords := c.Param("coords")
+	cat.BadIf(!reValidCoords.MatchString(coords), "Invalid coordinates.")
 
 	//return pc.blocks.GetBlock(
 

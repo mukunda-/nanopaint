@@ -151,7 +151,7 @@ func (hs *httpService) UseRateLimiter() echo.MiddlewareFunc {
 			}
 
 			if !hs.rateLimiter.Allow(ip) {
-				return c.JSON(429, basicResponse{
+				return c.JSON(429, baseResponse{
 					Code:    "RATE_LIMIT",
 					Message: "Rate limit exceeded.",
 				})

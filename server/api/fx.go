@@ -25,7 +25,7 @@ func unwrapHttpRouter(hs HttpService) Router {
 }
 
 // ---------------------------------------------------------------------------------------
-type StartupParams struct {
+type StartControllersParam struct {
 	fx.In
 
 	Controllers []Controller `group:"controllers"`
@@ -42,6 +42,6 @@ func Fx() fx.Option {
 		),
 
 		// Create all controllers.
-		fx.Invoke(func(s StartupParams) {}),
+		fx.Invoke(func(s StartControllersParam) {}),
 	)
 }

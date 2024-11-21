@@ -57,7 +57,7 @@ func (c BlockCoords) ToHex() string {
 // ---------------------------------------------------------------------------------------
 func CoordsFromString(str string) BlockCoords {
 	coords := make([]byte, 0, len(str))
-	for _, c := range str {
+	for _, c := range []byte(str) {
 		coords = append(coords, reverseCoordsCipher[c])
 	}
 

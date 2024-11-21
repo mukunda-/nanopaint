@@ -14,7 +14,8 @@ var log = common.GetLogger("http")
 type Ct = echo.Context
 type Controller any
 
-type basicResponse struct {
+// All responses must contain a code with an optional message.
+type baseResponse struct {
 	Code    string `json:"code"`
-	Message string `json:"message"`
+	Message string `json:"message,omitempty"`
 }
