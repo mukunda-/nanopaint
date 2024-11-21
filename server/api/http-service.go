@@ -78,6 +78,8 @@ func CreateHttpService(lc fx.Lifecycle, config config.Config, clock core.ClockSe
 		closeSignal: make(chan int),
 	}
 	config.Load("http", &hs.config)
+	installErrorsMiddleware(hs.E)
+	hs.installMiddleware()
 	hs.rateLimiter = CreateRateLimiter(hs.config.RateLimitPeriod, hs.config.RateLimitBurst, clock)
 	hs.server, hs.listener, hs.Port = createServer(hs.E, hs.config.Port)
 
@@ -93,6 +95,10 @@ func CreateHttpService(lc fx.Lifecycle, config config.Config, clock core.ClockSe
 	})
 
 	return hs
+}
+
+func (hs *httpService) installMiddleware() {
+
 }
 
 // ---------------------------------------------------------------------------------------

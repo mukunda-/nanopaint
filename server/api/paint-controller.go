@@ -6,33 +6,37 @@ package api
 
 import "go.mukunda.com/nanopaint/core"
 
-type PixelsController interface {
+type PaintController interface {
 	GetBlock(c Ct) error
 	SetPixel(c Ct) error
 }
 
-type pixelsController struct {
+type paintController struct {
 	blocks core.BlockService
 }
 
 // ---------------------------------------------------------------------------------------
-func CreatePixelsController(routes Router, blocks core.BlockService) PixelsController {
-	pc := &pixelsController{
+func CreatePaintController(routes Router, blocks core.BlockService, hs HttpService) PaintController {
+	pc := &paintController{
 		blocks: blocks,
 	}
-	routes.GET("/api/block/:coords", func(c Ct) error { return pc.GetBlock(c) })
-	routes.POST("/api/pixel/:coords", func(c Ct) error { return pc.SetPixel(c) })
 
-	return &pixelsController{}
+	routes.GET("/api/block/:coords", pc.GetBlock, hs.UseRateLimiter())
+	routes.POST("/api/pixel/:coords", pc.SetPixel, hs.UseRateLimiter())
+
+	return &paintController{}
 }
 
 // ---------------------------------------------------------------------------------------
-func (pc *pixelsController) GetBlock(c Ct) error {
+func (pc *paintController) GetBlock(c Ct) error {
+	//coords := c.Param("coords")
+
+	//return pc.blocks.GetBlock(
 
 	return c.JSON(501, "not implemented")
 }
 
 // ---------------------------------------------------------------------------------------
-func (pc *pixelsController) SetPixel(c Ct) error {
+func (pc *paintController) SetPixel(c Ct) error {
 	return c.JSON(501, "not implemented")
 }

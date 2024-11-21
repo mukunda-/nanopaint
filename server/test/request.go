@@ -197,8 +197,8 @@ func (r *Request) Run() *Request {
 	}
 
 	resp, err := client.Do(req)
-	r.StatusCode = resp.StatusCode
 	assert.NoError(r.T, err)
+	r.StatusCode = resp.StatusCode
 
 	body, err := io.ReadAll(resp.Body)
 	assert.NoError(r.T, err)
