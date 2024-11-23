@@ -4,14 +4,40 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 package core
 
-import "go.uber.org/fx"
+import (
+	"go.mukunda.com/nanopaint/config"
+	"go.uber.org/fx"
+)
 
+var defaultCoreConfig = coreConfig{
+	storageType: "mem",
+}
+
+// ---------------------------------------------------------------------------------------
+func createBlockRepo(config *coreConfig, clock ClockService) BlockRepo {
+
+	if config.storageType == "mem" {
+		return CreateMemBlockRepo(clock)
+	} else {
+		panic("unknown block storage type")
+	}
+}
+
+// ---------------------------------------------------------------------------------------
+func createCoreConfig(config config.Config) *coreConfig {
+	cc := coreConfig{}
+	cc = defaultCoreConfig
+	config.Load("core", &cc)
+	return &cc
+}
+
+// ---------------------------------------------------------------------------------------
 func Fx() fx.Option {
-	return fx.Option(
+	return fx.Options(
 		fx.Provide(
+			createCoreConfig,
+			createBlockRepo,
 			CreateBlockService,
 		),
-		fx.Invoke(func() {
-		}),
 	)
 }

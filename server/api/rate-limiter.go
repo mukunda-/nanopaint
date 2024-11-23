@@ -10,6 +10,14 @@ import (
 	"go.mukunda.com/nanopaint/core"
 )
 
+// This is a lightweight rate limit for high traffic performance. The main caveat is that
+// it does not have per-route configuration. All routes share the same rate limit and will
+// use each others' quota, if they are using the same rate limiter instance.
+//
+// Rate limit is defined by `burst`, which is the number of requests allowed at once and
+// `period` which is the time it takes to perform another request. Clients can accumulate
+// up to `burst` requests at a time, and they get one more every `period`.
+
 // Drop all records every hour.
 const RATE_LIMITER_RESET_PERIOD = 60 * 10 * 1000
 

@@ -9,6 +9,10 @@ import (
 	"go.mukunda.com/nanopaint/cat"
 )
 
+// This middleware helps with error handling. It catches panics and translates them into
+// HTTP errors. "Internal" errors are not forwarded to the client, but other errors such
+// as permission errors or bad requests are shown to the client.
+
 // ---------------------------------------------------------------------------------------
 func translateErrorForEcho(c Ct, ce cat.ControlledError) error {
 	switch tc := ce.Problem.(type) {

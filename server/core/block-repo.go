@@ -20,11 +20,11 @@ type (
 	BlockRepo interface {
 		// Gets the block at the given coordinates. Returns an error if the block cannot
 		// exist yet (e.g., invalid or wet parent).
-		GetBlock(coords BlockCoords) (*Block, error)
+		GetBlock(coords Coords) (*Block, error)
 
-		// Sets the pixel at the given coordinates. Returns an error if the pixel cannot be
-		// set or doesn't exist.
-		SetPixel(coords BlockCoords, color Color) error
+		// Creates at block at the given coordinates, or updates a wet block. Returns an
+		// error if the block cannot be set (dry) or doesn't exist yet (no parent).
+		SetBlock(coords Coords, color Color) error
 
 		// Routine function to dry pending pixels. May be called automatically by real
 		// implementations.
@@ -71,7 +71,7 @@ func (bl *Block) GetAverage() Color {
 }
 
 // ---------------------------------------------------------------------------------------
-func GetDryTime(coords BlockCoords) int {
+func GetDryTime(coords Coords) int {
 	level := len(coords)
 	if level >= len(DRY_TIME) {
 		return DRY_TIME[len(DRY_TIME)-1]

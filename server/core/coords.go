@@ -10,7 +10,7 @@ import (
 
 // ----------------------------------------------------------------------------------------
 type (
-	BlockCoords  []byte
+	Coords       []byte
 	CoordsFormat int
 )
 
@@ -24,7 +24,7 @@ const BASE64_COORDS_CIPHER = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMN
 var reverseCoordsCipher = [256]byte{}
 
 // ---------------------------------------------------------------------------------------
-func (c BlockCoords) Parent() BlockCoords {
+func (c Coords) Parent() Coords {
 	if len(c) == 0 {
 		panic("the top level block has no parent")
 	}
@@ -32,7 +32,7 @@ func (c BlockCoords) Parent() BlockCoords {
 }
 
 // ---------------------------------------------------------------------------------------
-func (c BlockCoords) Child(x, y uint8) BlockCoords {
+func (c Coords) Child(x, y uint8) Coords {
 	if (x >= 8) || (y >= 8) {
 		panic("invalid child coordinates")
 	}
@@ -41,7 +41,7 @@ func (c BlockCoords) Child(x, y uint8) BlockCoords {
 }
 
 // ---------------------------------------------------------------------------------------
-func (c BlockCoords) ToString() string {
+func (c Coords) ToString() string {
 	str := make([]byte, 0, len(c))
 	for _, b := range c {
 		str = append(str, BASE64_COORDS_CIPHER[b])
@@ -50,12 +50,12 @@ func (c BlockCoords) ToString() string {
 }
 
 // ---------------------------------------------------------------------------------------
-func (c BlockCoords) ToHex() string {
+func (c Coords) ToHex() string {
 	return hex.EncodeToString(c)
 }
 
 // ---------------------------------------------------------------------------------------
-func CoordsFromString(str string) BlockCoords {
+func CoordsFromString(str string) Coords {
 	coords := make([]byte, 0, len(str))
 	for _, c := range []byte(str) {
 		coords = append(coords, reverseCoordsCipher[c])
@@ -65,7 +65,7 @@ func CoordsFromString(str string) BlockCoords {
 }
 
 // ---------------------------------------------------------------------------------------
-func CoordsFromHex(str string) BlockCoords {
+func CoordsFromHex(str string) Coords {
 	coords, err := hex.DecodeString(str)
 	if err != nil {
 		panic(err)

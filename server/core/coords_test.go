@@ -19,22 +19,22 @@ func TestCoords(t *testing.T) {
 
 	// BlockCoords are a slice of bytes. The length determines the depth of a block.
 	// e.g., {0} is depth zero, {0, 0} is depth one (the first pixel of the top block).
-	coords := BlockCoords{0, 1, 2}
+	coords := Coords{0, 1, 2}
 
 	/////////////////////////////////////////////////////////
 	// Parent() reduces the depth by 1.
-	assert.EqualValues(t, BlockCoords{0, 1}, coords.Parent())
+	assert.EqualValues(t, Coords{0, 1}, coords.Parent())
 	// (Make sure we understand how these test functions work.)
-	assert.NotEqualValues(t, BlockCoords{0, 2}, coords.Parent())
-	assert.NotEqualValues(t, BlockCoords{2, 0}, coords.Parent())
+	assert.NotEqualValues(t, Coords{0, 2}, coords.Parent())
+	assert.NotEqualValues(t, Coords{2, 0}, coords.Parent())
 
 	/////////////////////////////////////////////////////////
 	// Child() is used to select a pixel in a given block.
 	// The x and y values are the coordinates of the pixel in
 	// the block, ranging from 0-7.
-	assert.EqualValues(t, BlockCoords{0, 1, 2, 3}, coords.Child(3, 0))
-	assert.EqualValues(t, BlockCoords{0, 1, 2, 2 << 3}, coords.Child(0, 2))
-	assert.EqualValues(t, BlockCoords{0, 1, 2, 3 + (2 << 3)}, coords.Child(3, 2))
+	assert.EqualValues(t, Coords{0, 1, 2, 3}, coords.Child(3, 0))
+	assert.EqualValues(t, Coords{0, 1, 2, 2 << 3}, coords.Child(0, 2))
+	assert.EqualValues(t, Coords{0, 1, 2, 3 + (2 << 3)}, coords.Child(3, 2))
 
 	/////////////////////////////////////////////////////////
 	// Using an invalid range panics.
@@ -52,7 +52,7 @@ func TestCoords(t *testing.T) {
 	/////////////////////////////////////////////////////////
 	// The parent of the top-level block is not valid and
 	// panics.
-	assert.Panics(t, func() { BlockCoords{}.Parent() })
+	assert.Panics(t, func() { Coords{}.Parent() })
 
 	// The upper two bits of each byte are not used.
 
@@ -60,7 +60,7 @@ func TestCoords(t *testing.T) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////
 func TestCoordsFormatting(t *testing.T) {
-	coords := BlockCoords{0, 1, 2}
+	coords := Coords{0, 1, 2}
 
 	// Coords are formatted either as a base64 cipher or as hex. The hex encoding takes
 	// 2 characters per depth level, while base64 takes 1 character per depth level.
@@ -68,24 +68,24 @@ func TestCoordsFormatting(t *testing.T) {
 	assert.Equal(t, "012", coords.ToString())
 	assert.Equal(t, "000102", coords.ToHex())
 
-	coords = BlockCoords{0, 5, 10, 15, 20, 25, 30}
+	coords = Coords{0, 5, 10, 15, 20, 25, 30}
 	assert.Equal(t, "05afkpu", coords.ToString())
 	assert.Equal(t, "00050a0f14191e", coords.ToHex())
 
 	// Empty coords formats to empty string.
-	coords = BlockCoords{}
+	coords = Coords{}
 	assert.Equal(t, "", coords.ToString())
 	assert.Equal(t, "", coords.ToHex())
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////
 func TestCoordsParsing(t *testing.T) {
-	assert.Equal(t, BlockCoords{0, 1, 2}, CoordsFromString("012"))
-	assert.Equal(t, BlockCoords{}, CoordsFromString(""))
+	assert.Equal(t, Coords{0, 1, 2}, CoordsFromString("012"))
+	assert.Equal(t, Coords{}, CoordsFromString(""))
 
 	for i := 0; i < 100; i++ {
 		length := rand.Intn(100)
-		coords := make(BlockCoords, length)
+		coords := make(Coords, length)
 		for j := 0; j < length; j++ {
 			coords[j] = byte(rand.Intn(64))
 		}

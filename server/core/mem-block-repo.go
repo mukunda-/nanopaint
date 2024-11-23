@@ -20,6 +20,7 @@ type (
 
 // ---------------------------------------------------------------------------------------
 func CreateMemBlockRepo(cs ClockService) BlockRepo {
+	log.Infoln(nil, "Using in-memory blockrepo. This implementation is for testing purposes and is not persisted.")
 	log.WithField(nil, "clock", fmt.Sprintf("%T", cs)).
 		Debugln("Creating MemBlockRepo")
 	blocks := make(map[string]*Block)
@@ -32,7 +33,7 @@ func CreateMemBlockRepo(cs ClockService) BlockRepo {
 }
 
 // ---------------------------------------------------------------------------------------
-func (r *MemBlockRepo) GetBlock(coords BlockCoords) (*Block, error) {
+func (r *MemBlockRepo) GetBlock(coords Coords) (*Block, error) {
 	block, ok := r.Blocks[coords.ToString()]
 	if !ok {
 		return nil, ErrBlockNotFound
@@ -41,7 +42,7 @@ func (r *MemBlockRepo) GetBlock(coords BlockCoords) (*Block, error) {
 }
 
 // ---------------------------------------------------------------------------------------
-func (r *MemBlockRepo) bubbleColor(coords BlockCoords) {
+func (r *MemBlockRepo) bubbleColor(coords Coords) {
 	if len(coords) == 0 {
 		return
 	}
@@ -69,7 +70,7 @@ func (r *MemBlockRepo) bubbleColor(coords BlockCoords) {
 }
 
 // ---------------------------------------------------------------------------------------
-func (r *MemBlockRepo) getOrCreateBlock(coords BlockCoords) (*Block, error) {
+func (r *MemBlockRepo) getOrCreateBlock(coords Coords) (*Block, error) {
 	block, err := r.GetBlock(coords)
 	if err == ErrBlockNotFound {
 		blockParent, err := r.GetBlock(coords.Parent())
@@ -103,7 +104,7 @@ func (r *MemBlockRepo) getOrCreateBlock(coords BlockCoords) (*Block, error) {
 }
 
 // ---------------------------------------------------------------------------------------
-func (r *MemBlockRepo) SetPixel(coords BlockCoords, color Color) error {
+func (r *MemBlockRepo) SetBlock(coords Coords, color Color) error {
 	if len(coords) == 0 {
 		return ErrBadCoords
 	}
