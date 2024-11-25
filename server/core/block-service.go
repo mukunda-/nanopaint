@@ -38,6 +38,19 @@ func (s *blockService) GetBlock(coords Coords) (*Block, error) {
 }
 
 // ---------------------------------------------------------------------------------------
+// Creates a new block or updates a wet block.
+//
+// Errors:
+//
+//	ErrBlockNotFound: the parent doesn't exist.
+//	ErrBlockIsDry: the block is already dry and cannot be updated.
 func (s *blockService) SetBlock(coords Coords, color Color) error {
-	return s.repo.SetBlock(coords, color)
+	err := s.repo.SetBlock(coords, color)
+	if err == ErrBlockNotFound || err == ErrBlockIsDry {
+		// Filter for these error types only. Others panic.
+		return err
+	}
+	cat.Catch(err, "Failed to set block.")
+
+	return nil
 }

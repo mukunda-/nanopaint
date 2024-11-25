@@ -7,6 +7,7 @@ package api
 import (
 	"encoding/base64"
 	"regexp"
+	"strconv"
 
 	"go.mukunda.com/nanopaint/cat"
 	"go.mukunda.com/nanopaint/core"
@@ -22,6 +23,7 @@ type blockController struct {
 }
 
 var reValidCoords = regexp.MustCompile(`^[0-9A-Za-z_-]*$`)
+var reValidColor = regexp.MustCompile(`^[a-fA-F0-9]{6}$`)
 
 // ---------------------------------------------------------------------------------------
 func CreatePaintController(routes Router, blocks core.BlockService, hs HttpService) BlockController {
@@ -56,9 +58,30 @@ func encodePixels(pixels []core.Pixel) string {
 }
 
 // ---------------------------------------------------------------------------------------
+func catchInvalidCoords(coords string) {
+	cat.BadIf(!reValidCoords.MatchString(coords), "Invalid coordinates.")
+}
+
+// ---------------------------------------------------------------------------------------
+func catchMissingField(fieldName, value string) {
+	cat.BadIf(value == "", "`body."+fieldName+"` is missing.")
+}
+
+// ---------------------------------------------------------------------------------------
+func parseColor(color string) core.Color {
+	cat.BadIf(!reValidColor.MatchString(color), "Invalid color. Must be in the format RRGGBB.")
+	// convert color from a RRGGBB string to a 32-bit integer
+	result, err := strconv.ParseInt(color, 16, 32)
+	if err != nil {
+		panic("unexpected strconv error in parseColor")
+	}
+	return core.Color(result)
+}
+
+// ---------------------------------------------------------------------------------------
 func (pc *blockController) GetBlock(c Ct) error {
 	coordsString := c.Param("coords")
-	cat.BadIf(!reValidCoords.MatchString(coordsString), "Invalid coordinates.")
+	catchInvalidCoords(coordsString)
 
 	coords := core.CoordsFromString(coordsString)
 	block, err := pc.blocks.GetBlock(coords)
@@ -81,5 +104,32 @@ func (pc *blockController) GetBlock(c Ct) error {
 
 // ---------------------------------------------------------------------------------------
 func (pc *blockController) SetBlock(c Ct) error {
-	return c.JSON(501, "not implemented")
+	var body struct {
+		Color string `json:"color"`
+	}
+	c.Bind(&body)
+	catchMissingField("color", body.Color)
+
+	coordsString := c.Param("coords")
+	catchInvalidCoords(coordsString)
+
+	coords := core.CoordsFromString(coordsString)
+	err := pc.blocks.SetBlock(coords, parseColor(body.Color))
+	cat.NotFoundIf(err == core.ErrBlockNotFound, "Block not found.")
+	if err == core.ErrBlockIsDry {
+		return c.JSON(400, baseResponse{
+			Code:    "BLOCK_DRY",
+			Message: "Block is dry.",
+		})
+		// } else if err == core.ErrBlockParentNotDry {
+		// 	return c.JSON(400, baseResponse{
+		// 		Code:    "BLOCK_PARENT_NOT_DRY",
+		// 		Message: "Parent block is not dry.",
+		// 	})
+	}
+	cat.Catch(err, "Failed to set block.")
+
+	return c.JSON(200, baseResponse{
+		Code: "BLOCK_SET",
+	})
 }

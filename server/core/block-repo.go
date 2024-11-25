@@ -35,10 +35,11 @@ type (
 var (
 	ErrBadCoords     = errors.New("given coordinates are not valid")
 	ErrBlockNotFound = errors.New("block does not exist")
-	ErrPixelIsDry    = errors.New("pixel is already dry")
+	ErrBlockIsDry    = errors.New("block is already dry")
+	//ErrBlockParentNotDry = errors.New("block parent is not dry")
 
 	// How long in seconds it takes for each level to dry (max is on the right).
-	DRY_TIME = []int{0, 15, 30, 60, 150, 300, 600}
+	DEFAULT_DRY_TIME = []int{0, 15, 30, 60, 150, 300, 600}
 )
 
 const (
@@ -73,9 +74,9 @@ func (bl *Block) GetAverage() Color {
 // ---------------------------------------------------------------------------------------
 func GetDryTime(coords Coords) int {
 	level := len(coords)
-	if level >= len(DRY_TIME) {
-		return DRY_TIME[len(DRY_TIME)-1]
+	if level >= len(DEFAULT_DRY_TIME) {
+		return DEFAULT_DRY_TIME[len(DEFAULT_DRY_TIME)-1]
 	}
 
-	return DRY_TIME[level]
+	return DEFAULT_DRY_TIME[level]
 }

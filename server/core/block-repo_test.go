@@ -37,7 +37,7 @@ func testBlockRepoDryTime(t *testing.T, repo BlockRepo, tcs *TestClockService) {
 		tcs.Advance(time.Second * time.Duration(dryTimes[level]-1))
 		repo.DryPixels()
 		err := repo.SetBlock(coords, 0x000000)
-		assert.ErrorIs(t, err, ErrBadCoords) // Errors: still not dry.
+		assert.ErrorIs(t, err, ErrBlockNotFound) // Errors: still not dry.
 
 		tcs.Advance(time.Second)
 		repo.DryPixels()
@@ -73,14 +73,16 @@ func testBlockRepoSetGet(t *testing.T, repo BlockRepo, tcs *TestClockService) {
 	{
 		// Passing the Zero Block to SetPixel is always invalid.
 		err := repo.SetBlock(Coords{}, 0x000000)
-		assert.Equal(t, ErrBadCoords, err)
+		assert.Equal(t, ErrBlockIsDry, err)
 	}
 
 	{
 		// Invalid to set a pixel without a parent.
 		// BlockCoords{0, 0} is two levels down (invalid).
 		err := repo.SetBlock(Coords{0, 0}, 0x000000)
-		assert.Equal(t, ErrBadCoords, err)
+		assert.Equal(t, ErrBlockNotFound, err)
+		err = repo.SetBlock(Coords{0, 0, 0}, 0x000000)
+		assert.Equal(t, ErrBlockNotFound, err)
 	}
 
 	////////////////////////////////////////////////////////////////////////////
@@ -111,7 +113,7 @@ func testBlockRepoSetGet(t *testing.T, repo BlockRepo, tcs *TestClockService) {
 		// We set the parent pixel above, but it is not dry yet.
 		// Sub-blocks are only created when the parent pixel is dry.
 		err := repo.SetBlock(Coords{0, 0}, 0x000000)
-		assert.Equal(t, ErrBadCoords, err)
+		assert.Equal(t, ErrBlockNotFound, err)
 
 		block, err := repo.GetBlock(Coords{0, 0})
 		assert.Nil(t, block)

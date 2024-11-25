@@ -20,7 +20,7 @@ type (
 
 // ---------------------------------------------------------------------------------------
 func CreateMemBlockRepo(cs ClockService) BlockRepo {
-	log.Infoln(nil, "Using in-memory blockrepo. This implementation is for testing purposes and is not persisted.")
+	log.Warnln(nil, "Using in-memory blockrepo. This implementation is for testing purposes and is not persisted.")
 	log.WithField(nil, "clock", fmt.Sprintf("%T", cs)).
 		Debugln("Creating MemBlockRepo")
 	blocks := make(map[string]*Block)
@@ -75,7 +75,7 @@ func (r *MemBlockRepo) getOrCreateBlock(coords Coords) (*Block, error) {
 	if err == ErrBlockNotFound {
 		blockParent, err := r.GetBlock(coords.Parent())
 		if err == ErrBlockNotFound {
-			return nil, ErrBadCoords
+			return nil, ErrBlockNotFound
 		} else if err != nil {
 			return nil, err
 		}
@@ -94,7 +94,7 @@ func (r *MemBlockRepo) getOrCreateBlock(coords Coords) (*Block, error) {
 			}
 		} else {
 			// Not dry yet.
-			return nil, ErrBadCoords
+			return nil, ErrBlockNotFound
 		}
 	} else if err != nil {
 		return nil, err
@@ -106,7 +106,8 @@ func (r *MemBlockRepo) getOrCreateBlock(coords Coords) (*Block, error) {
 // ---------------------------------------------------------------------------------------
 func (r *MemBlockRepo) SetBlock(coords Coords, color Color) error {
 	if len(coords) == 0 {
-		return ErrBadCoords
+		// The zero block is always dry.
+		return ErrBlockIsDry
 	}
 	if Pixel(color)&PIXEL_FLAG_MASK != 0 {
 		panic("invalid color value")
@@ -120,7 +121,7 @@ func (r *MemBlockRepo) SetBlock(coords Coords, color Color) error {
 
 	pixelCoord := coords[len(coords)-1]
 	if parent.Pixels[pixelCoord]&PIXEL_DRY != 0 {
-		return ErrPixelIsDry
+		return ErrBlockIsDry
 	}
 
 	parent.Pixels[pixelCoord] = Pixel(color) | PIXEL_PAINTED
