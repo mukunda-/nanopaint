@@ -59,7 +59,7 @@ func encodePixels(pixels []core.Pixel) string {
 
 // ---------------------------------------------------------------------------------------
 func catchInvalidCoords(coords string) {
-	cat.BadIf(!reValidCoords.MatchString(coords), "Invalid coordinates.")
+	cat.BadIf(!reValidCoords.MatchString(coords), "Invalid coordinate string.")
 }
 
 // ---------------------------------------------------------------------------------------

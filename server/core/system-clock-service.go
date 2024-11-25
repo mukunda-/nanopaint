@@ -15,3 +15,7 @@ func CreateSystemClockService() ClockService {
 func (cs *SystemClockService) Now() time.Time {
 	return time.Now()
 }
+
+func (cs *SystemClockService) StartInterval(duration time.Duration, callback IntervalCallback) {
+	// not implemented yet
+}

@@ -67,3 +67,56 @@ func TestTestClockThreadSafety(t *testing.T) {
 
 	assert.Equal(t, startTime.Add(time.Second*1000).Unix(), tc.Now().Unix())
 }
+
+func TestTestClockInterval(t *testing.T) {
+
+	{
+		tc := CreateTestClockService().(*TestClockService)
+
+		{
+			/////////////////////////////////////////////////
+			// Intervals are triggered when time is advanced.
+
+			total := 0
+			tc.StartInterval(time.Minute, func() {
+				total += 1
+			})
+
+			// Fires once
+			// (0:00 -> 1:00)
+			tc.Advance(time.Minute)
+			assert.Equal(t, 1, total)
+
+			// Does not advance, needs another second.
+			// (1:00 -> 1:59)
+			tc.Advance(time.Minute - time.Second)
+			assert.Equal(t, 1, total)
+
+			// Fires twice.
+			// (1:59 -> 3:00)
+			tc.Advance(time.Second + time.Minute)
+			assert.Equal(t, 3, total)
+		}
+	}
+
+	{
+		tc := CreateTestClockService().(*TestClockService)
+		{
+			/////////////////////////////////////////////////////////////////////////////
+			// Inside of StartInterval, Now() returns the time of the interval. It can be
+			// a partial increment of the current Advance operation.
+			expectedTime := tc.Now().Add(time.Second * 5)
+			total := 0
+			tc.StartInterval(time.Second*5, func() {
+				// we're advancing 50 seconds, but expect to have Now() return the time
+				// in 5 second increments like our interval.
+				assert.Equal(t, expectedTime, tc.Now())
+				expectedTime = expectedTime.Add(time.Second * 5)
+				total++
+			})
+
+			tc.Advance(time.Second * 50)
+			assert.Equal(t, 10, total)
+		}
+	}
+}

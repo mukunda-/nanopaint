@@ -7,7 +7,10 @@ package core
 import "time"
 
 type (
+	IntervalCallback func()
+
 	ClockService interface {
 		Now() time.Time
+		StartInterval(time.Duration, IntervalCallback)
 	}
 )

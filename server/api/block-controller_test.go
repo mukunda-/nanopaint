@@ -6,6 +6,7 @@ package api
 
 import (
 	"testing"
+	"time"
 
 	"go.mukunda.com/nanopaint/config"
 	"go.mukunda.com/nanopaint/core"
@@ -47,7 +48,7 @@ func TestBlockController_GetBlock(t *testing.T) {
 
 	/////////////////////////////////////////////////////////
 	// The given coordinates are validated.
-	rq().Get("/api/block/a@@b").Expect(400, "BAD_REQUEST", "Invalid coordinates.")
+	rq().Get("/api/block/a@@b").Expect(400, "BAD_REQUEST", "Invalid coordinate string.")
 
 	/////////////////////////////////////////////////////////
 	// /api/block is used to request existing blocks.
@@ -113,7 +114,21 @@ func TestBlockController_SetBlock(t *testing.T) {
 	rq().Post("/api/block/00").Send(goodColorPayload).
 		Expect(404, "NOT_FOUND", "Block not found.")
 
-	tc.Advance(15)
+	tc.Advance(time.Hour)
 	rq().Post("/api/block/00").Send(goodColorPayload).
 		Expect(200, "BLOCK_SET")
+
+	tc.Advance(time.Hour)
+	rq().Post("/api/block/000").Send(goodColorPayload).
+		Expect(200, "BLOCK_SET")
+
+	tc.Advance(time.Hour)
+	rq().Post("/api/block/0000").Send(goodColorPayload).
+		Expect(200, "BLOCK_SET")
+
+	////////////////////////////////////////////////////////////////////////////////
+	// A 400 BLOCK_DRY is returned if we try to set a block that has already dried.
+	tc.Advance(time.Hour)
+	rq().Post("/api/block/0000").Send(goodColorPayload).
+		Expect(400, "BLOCK_DRY")
 }

@@ -10,7 +10,9 @@ import (
 )
 
 var defaultCoreConfig = coreConfig{
-	storageType: "mem",
+	storageType:             "mem",
+	blockDryInterval:        1000,
+	disableBlockDryInterval: false,
 }
 
 // ---------------------------------------------------------------------------------------
@@ -38,6 +40,8 @@ func Fx() fx.Option {
 			createCoreConfig,
 			createBlockRepo,
 			CreateBlockService,
+			CreateCoreIntervals,
 		),
+		fx.Invoke(func(CoreIntervals) {}),
 	)
 }
