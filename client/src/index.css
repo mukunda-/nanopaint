@@ -5,9 +5,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap');
 
 body {
-   @apply bg-gray-100 text-gray-900 p-8;
+   @apply bg-gray-100 text-gray-900 px-8;
    font-family: "Inter", sans-serif;
-   
 }
 
 h1 {
