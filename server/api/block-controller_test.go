@@ -5,6 +5,8 @@
 package api
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -18,11 +20,22 @@ import (
 type testreqFactory func() *test.Request
 
 // ///////////////////////////////////////////////////////////////////////////////////////
-func createBlockControllerTester(t *testing.T) (*fxtest.App, testreqFactory, *core.TestClockService) {
+func createBlockControllerTester(t *testing.T, options string) (*fxtest.App, testreqFactory, *core.TestClockService) {
 	var hs HttpService
 	var tc *core.TestClockService
+
+	configFields := map[string]any{}
+
+	if strings.Contains(options, "noratelimit") {
+		configFields["http"] = struct {
+			DisableRateLimit bool
+		}{true}
+	}
+
+	configString, _ := json.Marshal(configFields)
+
 	app := fxtest.New(t,
-		config.ProvideFromYamlString(``),
+		config.ProvideFromJsonString(string(configString)),
 		fx.Provide(
 			core.CreateTestClockService,
 			CreateHttpService,
@@ -43,7 +56,7 @@ func createBlockControllerTester(t *testing.T) (*fxtest.App, testreqFactory, *co
 
 // ///////////////////////////////////////////////////////////////////////////////////////
 func TestBlockController_GetBlock(t *testing.T) {
-	app, rq, _ := createBlockControllerTester(t)
+	app, rq, _ := createBlockControllerTester(t, "noratelimit")
 	defer app.RequireStop()
 
 	/////////////////////////////////////////////////////////
@@ -62,13 +75,10 @@ func TestBlockController_GetBlock(t *testing.T) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////
 func TestBlockController_SetBlock(t *testing.T) {
-	app, rq, tc := createBlockControllerTester(t)
+	app, rq, tc := createBlockControllerTester(t, "noratelimit")
 	defer app.RequireStop()
 
-	type blockSetInput struct {
-		Color string `json:"color"`
-	}
-	goodColorPayload := blockSetInput{
+	goodColorPayload := setBlockInput{
 		Color: "FF0000",
 	}
 
@@ -93,18 +103,18 @@ func TestBlockController_SetBlock(t *testing.T) {
 		"FF000", "FF0000FF", "abcdefg", "g", "a", "ab", "1", "12", "123", "1234", "12345", "12345 6", "😃", " ",
 	}
 	for _, color := range invalidColors {
-		rq().Post("/api/block/0").Send(blockSetInput{
+		rq().Post("/api/block/0").Send(setBlockInput{
 			Color: color,
 		}).Expect(400, "BAD_REQUEST", "Invalid color. Must be in the format RRGGBB.")
 	}
 
 	//////////////////////////////////////////////////////////////////////////////////
 	// Blocks can be set and then updated within a certain time period until they dry.
-	rq().Post("/api/block/0").Send(blockSetInput{
+	rq().Post("/api/block/0").Send(setBlockInput{
 		Color: "ff0000",
 	}).Expect(200, "BLOCK_SET")
 
-	rq().Post("/api/block/0").Send(blockSetInput{
+	rq().Post("/api/block/0").Send(setBlockInput{
 		Color: "ffff00",
 	}).Expect(200, "BLOCK_SET")
 
@@ -131,4 +141,28 @@ func TestBlockController_SetBlock(t *testing.T) {
 	tc.Advance(time.Hour)
 	rq().Post("/api/block/0000").Send(goodColorPayload).
 		Expect(400, "BLOCK_DRY")
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////
+func TestBlockController_RateLimiting(t *testing.T) {
+	app, rq, tc := createBlockControllerTester(t, "")
+	defer app.RequireStop()
+
+	// We are allowed a certain number of Get and Set operations at once. Operations
+	// share the same quota.
+	for i := 0; i < 10; i++ {
+		rq().Post("/api/block/0").Send(setBlockInput{Color: "FF0000"}).Expect(200, "BLOCK_SET")
+	}
+
+	for i := 0; i < 10; i++ {
+		rq().Post("/api/block/0").Send(setBlockInput{Color: "FF0000"}).Expect(429, "RATE_LIMIT")
+		rq().Post("/api/block/0").Expect(429, "RATE_LIMIT")
+		tc.Advance(time.Millisecond * 100)
+		rq().Post("/api/block/0").Send(setBlockInput{Color: "FF0000"}).Expect(200, "BLOCK_SET")
+
+		rq().Get("/api/block/").Expect(429, "RATE_LIMIT")
+		tc.Advance(time.Millisecond * 200)
+		rq().Get("/api/block/").Expect(200, "BLOCK")
+		rq().Get("/api/block/").Expect(200, "BLOCK")
+	}
 }

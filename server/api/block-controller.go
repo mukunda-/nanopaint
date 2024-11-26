@@ -102,11 +102,13 @@ func (pc *blockController) GetBlock(c Ct) error {
 	return c.JSON(200, response)
 }
 
+type setBlockInput struct {
+	Color string `json:"color"`
+}
+
 // ---------------------------------------------------------------------------------------
 func (pc *blockController) SetBlock(c Ct) error {
-	var body struct {
-		Color string `json:"color"`
-	}
+	var body setBlockInput
 	c.Bind(&body)
 	catchMissingField("color", body.Color)
 

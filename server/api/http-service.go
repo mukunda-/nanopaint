@@ -33,9 +33,10 @@ type Router interface {
 }
 
 type httpConfig struct {
-	Port            int `yaml:"port"`
-	RateLimitPeriod int `yaml:"rateLimitPeriod"`
-	RateLimitBurst  int `yaml:"rateLimitBurst"`
+	Port             int  `yaml:"port"`
+	RateLimitPeriod  int  `yaml:"rateLimitPeriod"`
+	RateLimitBurst   int  `yaml:"rateLimitBurst"`
+	DisableRateLimit bool `yaml:"disableRateLimit"`
 }
 
 // ---------------------------------------------------------------------------------------
@@ -47,6 +48,13 @@ type httpService struct {
 	listener    net.Listener
 	config      httpConfig
 	rateLimiter RateLimiter
+}
+
+var defaultHttpConfig = httpConfig{
+	Port:             1452,
+	RateLimitPeriod:  100,
+	RateLimitBurst:   10,
+	DisableRateLimit: false,
 }
 
 // ---------------------------------------------------------------------------------------
@@ -77,10 +85,13 @@ func CreateHttpService(lc fx.Lifecycle, config config.Config, clock core.ClockSe
 		E:           echo.New(),
 		closeSignal: make(chan int),
 	}
+	hs.config = defaultHttpConfig
 	config.Load("http", &hs.config)
 	installErrorsMiddleware(hs.E)
 	hs.installMiddleware()
-	hs.rateLimiter = CreateRateLimiter(hs.config.RateLimitPeriod, hs.config.RateLimitBurst, clock)
+	if !hs.config.DisableRateLimit {
+		hs.rateLimiter = CreateRateLimiter(hs.config.RateLimitPeriod, hs.config.RateLimitBurst, clock)
+	}
 	hs.server, hs.listener, hs.Port = createServer(hs.E, hs.config.Port)
 
 	lc.Append(fx.Hook{
@@ -150,7 +161,7 @@ func (hs *httpService) UseRateLimiter() echo.MiddlewareFunc {
 				ip = c.Request().RemoteAddr
 			}
 
-			if !hs.rateLimiter.Allow(ip) {
+			if hs.rateLimiter != nil && !hs.rateLimiter.Allow(ip) {
 				return c.JSON(429, baseResponse{
 					Code:    "RATE_LIMIT",
 					Message: "Rate limit exceeded.",
