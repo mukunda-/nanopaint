@@ -1,14 +1,36 @@
+// ///////////////////////////////////////////////////////////////////////////////////////
+// Nanopaint (C) 2024 Mukunda Johnson (me@mukunda.com)
+// Distributed under the MIT license. See LICENSE.txt for details.
+// ///////////////////////////////////////////////////////////////////////////////////////
 // High resolution coordinates.
+// (not used, in favor of bigint implementation)
 
 // Numbers are kept in base 8 decimal format.
 
 export type Coords = string;
 
+function parseCoords(coords: Coords): [boolean, string, number] {
+   const sign = coords.startsWith("-");
+   coords = sign ? coords.substring(1) : coords;
+   let frac = coords.indexOf(".");
+   coords = coords.replace(".", "");
+   if (frac == -1) {
+      frac = 0;
+   } else {
+      frac = coords.length - frac;
+   }
+
+   const padding = "0".repeat((8 - coords.length % 8) % 8);
+   frac += padding.length;
+
+   return [sign, coords + padding, frac];
+}
+
 //----------------------------------------------------------------------------------------
 // Returns sign, value, and magnitude of two numbers.
 // The numbers are padded to 8 digits and aligned to the same length.
 // e.g. 2.4 and 33.11 will return 02400000 and 33110000 with magnitude 2.
-function parseBinaryOperation(a: Coords, b: Coords): [boolean, boolean, string, string, number] {
+function parseBinaryAligned(a: Coords, b: Coords): [boolean, boolean, string, string, number] {
    const sign1 = a[0] == "-";
    const sign2 = b[0] == "-";
    a = a.replace("-", "");
@@ -88,7 +110,6 @@ function performAdd(value1: string, value2: string, mag: number): string {
       const c = a + b + carry;
       carry = c >> 24;
       resultParts.push((c & 0xFFFFFF).toString(8).padStart(8, "0"));
-      
    }
 
    let mag2 = mag;
@@ -138,33 +159,25 @@ function performSubtract(value1: string, value2: string, mag: number): [boolean,
 }
 
 //----------------------------------------------------------------------------------------
-function performMul(value1: string, value2: string, mag: number): string {
+function performMulPart(value1: string, value2: string): string {
    const resultParts: string[] = [];
+   const factor = parseInt(value2, 8);
    let carry = 0;
    for (let i = value1.length - 8; i >= 0; i -= 8) {
       const a = parseInt(value1.substring(i, i + 8), 8);
-      const b = parseInt(value2.substring(i, i + 8), 8);
-      const c = a * b + carry;
-      carry = c >> 24;
-      resultParts.push((c & 0xFFFFFF).toString(8).padStart(8, "0"));
+      const product = a * factor + carry;
+      carry = product >> 24;
+      resultParts.push((product & 0xFFFFFF).toString(8).padStart(8, "0"));
    }
 
-   let mag2 = mag;
-   if (carry > 0) {
-      const carryString = carry.toString(8);
-      resultParts.push(carryString);
-      mag2 += carryString.length;
-   }
+   resultParts.push(carry.toString(8));
 
-   let resultString = resultParts.reverse().join("");
-   resultString = resultString.substring(0, mag2) + "." + resultString.substring(mag2);
-
-   return resultString;
+   return resultParts.reverse().join("");
 }
 
 //----------------------------------------------------------------------------------------
 function add(a: Coords, b: Coords): Coords {
-   const [sign1, sign2, value1, value2, mag] = parseBinaryOperation(a, b);
+   const [sign1, sign2, value1, value2, mag] = parseBinaryAligned(a, b);
    
    if (sign1 && !sign2) {
       const [resultSign, result] = performSubtract(value2, value1, mag);
@@ -180,7 +193,7 @@ function add(a: Coords, b: Coords): Coords {
 
 //----------------------------------------------------------------------------------------
 function sub(a: Coords, b: Coords): Coords {
-   const [sign1, sign2, value1, value2, mag] = parseBinaryOperation(a, b);
+   const [sign1, sign2, value1, value2, mag] = parseBinaryAligned(a, b);
 
    if (sign1 && !sign2) {
       const result = performAdd(value1, value2, mag);
@@ -200,10 +213,30 @@ function sub(a: Coords, b: Coords): Coords {
 
 //----------------------------------------------------------------------------------------
 function mul(a: Coords, b: Coords): Coords {
-   const [sign1, sign2, value1, value2, mag] = parseBinaryOperation(a, b);
+   // TODO: unfinished logic!
+   // using bigint (cmath2) instead.
+
+   const [sign1, value1, frac1] = parseCoords(a);
+   const [sign2, value2, frac2] = parseCoords(b);
+
+   const fracs = frac1 + frac2;
    const sign = sign1 != sign2;
-   const result = performMul(value1, value2, mag);
-   return (sign ? "-" : "") + cleanNumberString(result);
+   const summands: string[] = [];
+   for (let part = 0; part < value2.length; part += 8) {
+      const partValue = value2.substring(part, part + 8);
+      // for each part, divide by 8 digits.
+      summands.push("0".repeat(part) + performMulPart(value1, partValue));
+   }
+
+   let sum = summands[0];
+   for (let i = 1; i < summands.length; i++) {
+      sum += "0".repeat(i * 8);
+      sum = add(sum, summands[i]);
+   }
+
+   sum = sum.substring(0, sum.length - fracs) + "." + sum.substring(sum.length - fracs);
+
+   return (sign ? "-" : "") + cleanNumberString(sum);
 }
 
 //----------------------------------------------------------------------------------------
@@ -219,54 +252,3 @@ function negate(a: Coords): Coords {
 export default {
    add, sub, mul, negate
 };
-
-//----------------------------------------------------------------------------------------
-// export class Coords {
-//    public value = "";
-
-//    //-------------------------------------------------------------------------------------
-//    constructor(value: string) {
-//       this.value = value;
-//    }
-
-//    //-------------------------------------------------------------------------------------
-//    negate(): Coords {
-//       if (this.value[0] == "-") {
-//          return new Coords(this.value.substring(1));
-//       } else {
-//          return new Coords("-" + this.value);
-//       }
-//    }
-
-//    parts(): [boolean, string, number] {
-//       const sign = this.value[0] == "-";
-//       let value = sign ? this.value.substring(1) : this.value;
-//       let exp = value.indexOf(".");
-//       if (exp == -1) {
-//          exp = value.length;
-//       }
-//       value = value.replace(".", "");
-//       return [sign, value, exp];
-//    }
-
-//    //-------------------------------------------------------------------------------------
-//    add(addend: Coords): Coords {
-//       let [sign1, value1, exp1] = this.parts();
-//       let [sign2, value2, exp2] = addend.parts();
-//       let result = "";
-//       let carry = 0;
-//       for (let i = 0; i < this.value.length; i++) {
-//          let a = parseInt(this.value[i], 8);
-//          let b = parseInt(other.value[i], 8);
-//          let c = a + b + carry;
-//          if (c >= 8) {
-//             c -= 8;
-//             carry = 1;
-//          } else {
-//             carry = 0;
-//          }
-//          result += c.toString(8);
-//       }
-//       return new Coords(result);
-//    }
-// }

@@ -2,10 +2,10 @@
 // Nanopaint (C) 2024 Mukunda Johnson (me@mukunda.com)
 // Distributed under the MIT license. See LICENSE.txt for details.
 // ///////////////////////////////////////////////////////////////////////////////////////
-import cmath from "./cmath";
+import {Cmath, Coords} from "./cmath2";
 
 describe("cmath", () => {
-   return; // disabled.
+
    ///////////////////////////////////////////////////////////////////////////////////////
    const testInteger = () => {
       return Math.floor(Math.random() * 1000000);
@@ -40,35 +40,38 @@ describe("cmath", () => {
 
    ///////////////////////////////////////////////////////////////////////////////////////
    test("addition", () => {
-      
-      expect(cmath.add("2", "2")).toBe("4");
-      expect(cmath.add("2.0", "2")).toBe("4");
-      expect(cmath.add("2.0", "2.0")).toBe("4");
-      expect(cmath.add("2.4", "2.4")).toBe("5");
-      expect(cmath.add(".4", ".4")).toBe("1");
-      expect(cmath.add("2.2", "2")).toBe("4.2");
-      expect(cmath.add("20400.33", "0.756532")).toBe("20401.306532");
+      // When the coordinates are converted to strings, they are base 8 with any
+      // trailing or leading zeroes discarded. The raw internal representation may have
+      // more zeroes, given that there is the fractional point to consider.
+      expect(Cmath.add("2", "2").toString()).toBe("4");
+      expect(Cmath.add("2.0", "2").toString()).toBe("4");
+      expect(Cmath.add("2.0", "2.0").toString()).toBe("4");
+      expect(Cmath.add("2.4", "2.4").toString()).toBe("5");
+      expect(Cmath.add(".4", ".4").toString()).toBe("1");
+      expect(Cmath.add("2.2", "2").toString()).toBe("4.2");
+      expect(Cmath.add("20400.33", "0.756532").toString()).toBe("20401.306532");
+      expect(Cmath.add("13.57313", "-13.63643").toString()).toBe("-0.0433");
 
       // integers
       for (let i = 0; i < 1000; i++) {
          const a = testInteger();
          const b = testInteger();
          const op = a.toString(8) + " + " + b.toString(8) + " = ";
-         expect(op+cmath.add(a.toString(8), b.toString(8))).toBe(op+(a + b).toString(8));
+         expect(op+Cmath.add(a.toString(8), b.toString(8)).toString()).toBe(op+(a + b).toString(8));
       }
 
       // negative
-      expect(cmath.add("-2", "2")).toBe("0");
-      expect(cmath.add("-3", "2")).toBe("-1");
-      expect(cmath.add("3", "-4")).toBe("-1");
-      expect(cmath.add("3", "-4.1")).toBe("-1.1");
+      expect(Cmath.add("-2", "2").toString()).toBe("0");
+      expect(Cmath.add("-3", "2").toString()).toBe("-1");
+      expect(Cmath.add("3", "-4").toString()).toBe("-1");
+      expect(Cmath.add("3", "-4.1").toString()).toBe("-1.1");
 
       // signed numbers
       for (let i = 0; i < 1000; i++) {
          const a = testSignedFractional();
          const b = testSignedFractional();
          const op = a.toString(8) + " + " + b.toString(8) + " = ";
-         expect(op+cmath.add(a.toString(8), b.toString(8))).toBe(op+(a + b).toString(8));
+         expect(op+Cmath.add(a.toString(8), b.toString(8)).toString()).toBe(op+(a + b).toString(8));
       }
    });
 
@@ -76,13 +79,13 @@ describe("cmath", () => {
    test("doubling numbers", () => {
       // For this test, the number doubles each iteration. Every 3 iterations, we expect
       // the number of zeroes to change. This is building a huge number (~2^1000)
-      let num = "0.000001";
+      let num = new Coords("0.000001");
       let expectedZeroes = -6;
       for (let i = 0; i < 1000; i++) {
          for (let j = 0; j < 3; j++) {
-            const numZeroes = (num.match(/0/g) || []).length;
+            const numZeroes = (num.toString().match(/0/g) || []).length;
             expect(numZeroes).toBe(Math.abs(expectedZeroes));
-            num = cmath.add(num, num);
+            num = num.add(num);
          }
          expectedZeroes++;
       }
@@ -90,23 +93,23 @@ describe("cmath", () => {
 
    const testSub = (a: number, b: number) => {
       const op = a.toString(8) + " - " + b.toString(8) + " = ";
-      expect(op+cmath.sub(a.toString(8), b.toString(8))).toBe(op+(a - b).toString(8));
+      expect(op+Cmath.sub(a.toString(8), b.toString(8))).toBe(op+(a - b).toString(8));
    };
 
    const testSubc = (a: string, b: string) => {
       const op = a + " - " + b + " = ";
-      expect(op+cmath.sub(a, b)).toBe(op+(parseCoords(a) - parseCoords(b)).toString(8));
+      expect(op+Cmath.sub(a, b)).toBe(op+(parseCoords(a) - parseCoords(b)).toString(8));
    };
 
    ///////////////////////////////////////////////////////////////////////////////////////
    test("subtraction", () => {
-      expect(cmath.sub("2", "2")).toBe("0");
-      expect(cmath.sub("2.0", "2")).toBe("0");
-      expect(cmath.sub("2.0", "2.0")).toBe("0");
-      expect(cmath.sub("2.4", "2.4000")).toBe("0");
-      expect(cmath.sub("2.4", "2.3000")).toBe("0.1");
-      expect(cmath.sub("2.4", "2.5000")).toBe("-0.1");
-      expect(cmath.sub("-1.151262", "1105.463")).toBe("-1106.634262");
+      expect(Cmath.sub("2", "2").toString()).toBe("0");
+      expect(Cmath.sub("2.0", "2").toString()).toBe("0");
+      expect(Cmath.sub("2.0", "2.0").toString()).toBe("0");
+      expect(Cmath.sub("2.4", "2.4000").toString()).toBe("0");
+      expect(Cmath.sub("2.4", "2.3000").toString()).toBe("0.1");
+      expect(Cmath.sub("2.4", "2.5000").toString()).toBe("-0.1");
+      expect(Cmath.sub("-1.151262", "1105.463").toString()).toBe("-1106.634262");
 
       // integers
       for (let i = 0; i < 1000; i++) {
@@ -135,6 +138,8 @@ describe("cmath", () => {
    ///////////////////////////////////////////////////////////////////////////////////////
    test("ones and sevens", () => {
 
+      // This test relies on a different perspective that doesn't need math to compute the
+      // results.
       const randomOnes = (length: number) => {
          const ones: string[] = [];
          for (let j = 0; j < length; j++) {
@@ -152,27 +157,46 @@ describe("cmath", () => {
          const sevens = "7".repeat(1000);
          const ones = randomOnes(1000);
          const expected = ones.split("").map(v => v == "1" ? "6" : "7").join("");
-         expect(cmath.sub(sevens, ones)).toBe(expected);
+         expect(Cmath.sub(sevens, ones).toString()).toBe(expected);
       }
    });
 
    ///////////////////////////////////////////////////////////////////////////////////////
    test("multiplication 1", () => {
-      expect(cmath.mul("2", "2")).toBe("4");
+      expect(Cmath.mul("2.0", "2").toString()).toBe("4");
 
-      // let number = "0.123456701234567012345670000011112225413501351574350756456421231111000000000000000";
-      // for (let i = 0; i < 1000; i++) {
-      //    const doubled = cmath.add(number, number);
-      //    const doubled2 = cmath.mul(number, "2");
-      //    expect(doubled2).toBe(doubled);
-      //    number = doubled;
-      // }
+      // This number won't overflow max precision because we are multiplying by integers.
+      let number = "0.123456701234567012345670000011112225413501351574350756456421231111000000000000000";
+      for (let i = 0; i < 1000; i++) {
+         const doubled = Cmath.add(number, number).toString();
+         const doubled2 = Cmath.mul(number, "2").toString();
+         expect(doubled2).toBe(doubled);
+         number = doubled;
+      }
 
-      // for (let i = 0; i < 1000; i++) {
-      //    const tripled = cmath.add(cmath.add(number, number), number);
-      //    const tripled2 = cmath.mul(number, "3");
-      //    expect(tripled).toBe(tripled2);
-      //    number = tripled;
-      // }
+      for (let i = 0; i < 1000; i++) {
+         const tripled = Cmath.add(Cmath.add(number, number), number).toString();
+         const tripled2 = Cmath.mul(number, "3").toString();
+         expect(tripled).toBe(tripled2);
+         number = tripled;
+      }
+   });
+
+   test("truncation", () => {
+      //
+      // After operations, fractional digits that exceed the current precision will be
+      // discarded.
+      //
+
+      // So here we are accumulating up to N zeroes and
+      // then it should truncate back to zero.
+      let number = "1";
+      for (let i = 0; i < Cmath.getPrecision(); i++) {
+         number = Cmath.mul(number, "0.1").toString();
+         const numZeroes = (number.match(/0/g) || []).length;
+         expect(numZeroes).toBe(i + 1);
+      }
+      number = Cmath.mul(number, "0.1").toString();
+      expect(number).toBe("0");      
    });
 });
