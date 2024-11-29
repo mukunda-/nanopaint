@@ -200,3 +200,17 @@ func BadIf(condition bool, message string) {
 func NotFoundIf(condition bool, message string) {
 	Catch(condition, NotFoundError{message})
 }
+
+type Lockable interface {
+	TryLock() bool
+	Unlock()
+}
+
+// ---------------------------------------------------------------------------------------
+// Panics if a mutex is unlocked.
+func EnsureLocked(lock Lockable) {
+	if lock.TryLock() {
+		defer lock.Unlock()
+		panic("mutex was not locked")
+	}
+}
