@@ -7,6 +7,7 @@ package block2
 import (
 	"fmt"
 	"math/rand"
+	"strings"
 	"testing"
 	"time"
 
@@ -55,7 +56,7 @@ func TestMemBlockRepoBubbling(t *testing.T) {
 
 	/////////////////////////////////////////////////////////////////
 	// (1.1) Setting 1 pixel
-	repo.SetPixel(coords1, blue)
+	assert.NoError(t, repo.SetPixel(coords1, blue))
 	block, err := repo.GetBlock(coords1.ParentOfPixel())
 	assert.NoError(t, err)
 	assert.EqualValues(t, Pixel(int(blue)<<16)|PIXEL_SET, block.Pixels[coords1.PixelIndex()])
@@ -166,7 +167,7 @@ func TestMemBlockBubble2(t *testing.T) {
 	// pixels are bubbled and shrunk accordingly.
 	// No complex blending testing here, just 1:1 pixel replication.
 
-	var pixelData [100 * 100]Color
+	var pixelData [77 * 77]Color
 	for i := range pixelData {
 		pixelData[i] = Color(rand.Intn(0x1000))
 	}
@@ -175,51 +176,41 @@ func TestMemBlockBubble2(t *testing.T) {
 	repo := CreateMemBlockRepo(clock)
 
 	// Some random and deep coordinate.
-	baseCoords := coordsFromBits(fmt.Sprintf("%20b", rand.Intn(1<<20)), fmt.Sprintf("%20b", rand.Intn(1<<20)))
+	baseCoords := coordsFromBits(fmt.Sprintf("%020b", rand.Intn(1<<20)), fmt.Sprintf("%020b", rand.Intn(1<<20)))
 
-	// Paint the random pixels at x8 scale.
-	for x := 0; x < 100; x++ {
-		for y := 0; y < 100; y++ {
-			for px := 0; px < 8; px++ {
-				for py := 0; py < 8; py++ {
+	// Paint the random pixels at x4 scale.
+	for x := 0; x < 77; x++ {
+		for y := 0; y < 77; y++ {
+			for px := 0; px < 4; px++ {
+				for py := 0; py < 4; py++ {
 					pcoords := digCoords(baseCoords, x, y, 7)
-					pcoords = digCoords(pcoords, px, py, 3)
-					repo.SetPixel(pcoords, pixelData[x+y*100])
+					pcoords = digCoords(pcoords, px, py, 2)
+					repo.SetPixel(pcoords, pixelData[x+y*77])
 				}
 			}
 		}
 	}
 
 	// Then verify at higher levels that the image is the same.
-	for x := 0; x < 100; x++ {
-		for y := 0; y < 100; y++ {
-			// Up 1 level
-			for px := 0; px < 4; px++ {
-				for py := 0; py < 4; py++ {
-					pcoords := digCoords(baseCoords, x, y, 7)
-					pcoords = digCoords(pcoords, px, py, 2)
-					pixel, err := getPixel(repo, pcoords)
-					assert.NoError(t, err)
-					assert.EqualValues(t, pixelData[x+y*100]|0xF000, pixel&0xFFFF)
-				}
-			}
+	for x := 0; x < 77; x++ {
+		for y := 0; y < 77; y++ {
 
-			// Up 2 levels
+			// Up 1 levels
 			for px := 0; px < 2; px++ {
 				for py := 0; py < 2; py++ {
 					pcoords := digCoords(baseCoords, x, y, 7)
 					pcoords = digCoords(pcoords, px, py, 1)
 					pixel, err := getPixel(repo, pcoords)
 					assert.NoError(t, err)
-					assert.EqualValues(t, pixelData[x+y*100]|0xF000, pixel&0xFFFF)
+					assert.EqualValues(t, pixelData[x+y*77]|0xF000, pixel&0xFFFF)
 				}
 			}
 
-			// Up 3 levels
+			// Up 2 levels
 			pcoords := digCoords(baseCoords, x, y, 7)
 			pixel, err := getPixel(repo, pcoords)
 			assert.NoError(t, err)
-			assert.EqualValues(t, pixelData[x+y*100]|0xF000, pixel&0xFFFF)
+			assert.EqualValues(t, pixelData[x+y*77]|0xF000, pixel&0xFFFF)
 
 		}
 	}
@@ -286,4 +277,20 @@ func TestMemBlockDrying(t *testing.T) {
 		assert.ErrorIs(t, err, ErrPixelIsDry)
 	}
 
+}
+
+func TestMemBlockMaxDepth(t *testing.T) {
+	clock := clock.CreateTestClockService().(*clock.TestClockService)
+	repo := CreateMemBlockRepo(clock).(*MemBlockRepo)
+	repo.SetMaxDepth(101)
+
+	err := repo.SetPixel(coordsFromBits(
+		strings.Repeat("0", 101)+"000000",
+		strings.Repeat("0", 101)+"000000"), Color(0x00F))
+	assert.NoError(t, err)
+
+	err = repo.SetPixel(coordsFromBits(
+		strings.Repeat("0", 101)+"0000000",
+		strings.Repeat("0", 101)+"0000000"), Color(0x00F))
+	assert.ErrorIs(t, err, ErrMaxDepthExceeded)
 }

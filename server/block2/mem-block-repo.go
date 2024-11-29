@@ -5,6 +5,7 @@
 package block2
 
 import (
+	"errors"
 	"sync"
 	"time"
 
@@ -29,18 +30,24 @@ type (
 	}
 
 	MemBlockRepo struct {
-		Clock  ClockService
-		Blocks map[string]*MemBlock
-		mutex  sync.Mutex
+		Clock    ClockService
+		Blocks   map[string]*MemBlock
+		mutex    sync.Mutex
+		maxDepth int
 	}
 )
+
+var ErrMaxDepthExceeded = errors.New("max depth exceeded")
+
+const DefaultMemBlockRepoMaxDepth = 100
 
 // ---------------------------------------------------------------------------------------
 func CreateMemBlockRepo(cs ClockService) BlockRepo {
 	blocks := make(map[string]*MemBlock)
 	return &MemBlockRepo{
-		Clock:  cs,
-		Blocks: blocks,
+		Clock:    cs,
+		Blocks:   blocks,
+		maxDepth: DefaultMemBlockRepoMaxDepth,
 	}
 }
 
@@ -172,6 +179,9 @@ func (r *MemBlockRepo) SetPixel(coords Coords, color Color) error {
 	defer r.mutex.Unlock()
 
 	blockCoords := coords.ParentOfPixel()
+	if blockCoords.BitLength() > r.maxDepth {
+		return ErrMaxDepthExceeded
+	}
 	block := r.getOrCreateBlock(blockCoords)
 	r.dryBlock(block)
 
@@ -199,4 +209,11 @@ func (r *MemBlockRepo) SetPixel(coords Coords, color Color) error {
 	r.bubbleColor(coords)
 
 	return nil
+}
+
+func (r *MemBlockRepo) SetMaxDepth(depth int) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	r.maxDepth = depth
 }

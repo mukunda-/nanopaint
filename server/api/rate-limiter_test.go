@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"go.mukunda.com/nanopaint/core"
+	"go.mukunda.com/nanopaint/clock"
 )
 
 // ///////////////////////////////////////////////////////////////////////////////////////
 func TestRateLimiterTiming(t *testing.T) {
-	clock := core.CreateTestClockService().(*core.TestClockService)
+	clock := clock.CreateTestClockService().(*clock.TestClockService)
 
 	period := 50
 	burst := 10
@@ -62,7 +62,7 @@ func TestRateLimiterThreading(t *testing.T) {
 	////////////////////////////////////
 	// The rate limiter is thread safe.
 	//
-	clock := core.CreateTestClockService().(*core.TestClockService)
+	clock := clock.CreateTestClockService().(*clock.TestClockService)
 	period := 10
 	burst := 5
 	nthreads := 100

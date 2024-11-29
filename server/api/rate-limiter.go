@@ -7,7 +7,7 @@ package api
 import (
 	"sync"
 
-	"go.mukunda.com/nanopaint/core"
+	"go.mukunda.com/nanopaint/clock"
 )
 
 // This is a lightweight rate limit for high traffic performance. The main caveat is that
@@ -33,7 +33,7 @@ type rateLimiter struct {
 	nextRequestTime map[string]unixMillis
 	millisPeriod    int // one request allowed per this many milliseconds
 	burst           int // number of requests that can be "stocked up" if not used
-	clock           core.ClockService
+	clock           clock.ClockService
 	mutex           sync.Mutex
 
 	// Reset all entries periodically to reduce waste from inactive clients
@@ -41,7 +41,7 @@ type rateLimiter struct {
 }
 
 // ---------------------------------------------------------------------------------------
-func CreateRateLimiter(millisPeriod int, burst int, clock core.ClockService) RateLimiter {
+func CreateRateLimiter(millisPeriod int, burst int, clock clock.ClockService) RateLimiter {
 	return &rateLimiter{
 		nextRequestTime: make(map[string]unixMillis),
 		millisPeriod:    millisPeriod,

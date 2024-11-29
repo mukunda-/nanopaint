@@ -8,15 +8,15 @@ import (
 	"testing"
 	"time"
 
+	"go.mukunda.com/nanopaint/clock"
 	"go.mukunda.com/nanopaint/config"
-	"go.mukunda.com/nanopaint/core"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxtest"
 )
 
 func TestTestController(t *testing.T) {
 	var hs HttpService
-	var tc *core.TestClockService
+	var tc *clock.TestClockService
 	app := fxtest.New(t,
 		config.ProvideFromYamlString(`
 http:
@@ -24,11 +24,11 @@ http:
   rateLimitPeriod: 50
   rateLimitBurst: 10
 `),
-		fx.Provide(core.CreateTestClockService),
+		fx.Provide(clock.CreateTestClockService),
 		Fx(),
-		fx.Invoke(func(phs HttpService, cs core.ClockService) {
+		fx.Invoke(func(phs HttpService, cs clock.ClockService) {
 			hs = phs
-			tc = cs.(*core.TestClockService)
+			tc = cs.(*clock.TestClockService)
 		}),
 	)
 	app.RequireStart()

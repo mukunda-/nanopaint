@@ -10,8 +10,8 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"go.mukunda.com/nanopaint/cat"
+	"go.mukunda.com/nanopaint/clock"
 	"go.mukunda.com/nanopaint/config"
-	"go.mukunda.com/nanopaint/core"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxtest"
 )
@@ -28,7 +28,7 @@ func TestErrorsMiddleware(t *testing.T) {
 		fx.Provide(
 			CreateHttpService,
 			unwrapHttpRouter,
-			core.CreateTestClockService,
+			clock.CreateTestClockService,
 		),
 		fx.Invoke(func(phs HttpService) {
 			hs = phs

@@ -25,7 +25,6 @@ var (
 	ErrBadCoords     = errors.New("given coordinates are not valid")
 	ErrBlockNotFound = errors.New("block does not exist")
 	ErrPixelIsDry    = errors.New("pixel is dry")
-	//ErrBlockParentNotDry = errors.New("block parent is not dry")
 
 	// How long in seconds it takes for each level to dry (max is on the right).
 	DEFAULT_DRY_TIME = []int{0, 15, 30, 60, 150, 300, 600}

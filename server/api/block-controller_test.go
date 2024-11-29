@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"go.mukunda.com/nanopaint/clock"
 	"go.mukunda.com/nanopaint/config"
 	"go.mukunda.com/nanopaint/core"
 	"go.mukunda.com/nanopaint/test"
@@ -20,9 +21,9 @@ import (
 type testreqFactory func() *test.Request
 
 // ///////////////////////////////////////////////////////////////////////////////////////
-func createBlockControllerTester(t *testing.T, options string) (*fxtest.App, testreqFactory, *core.TestClockService) {
+func createBlockControllerTester(t *testing.T, options string) (*fxtest.App, testreqFactory, *clock.TestClockService) {
 	var hs HttpService
-	var tc *core.TestClockService
+	var tc *clock.TestClockService
 
 	configFields := map[string]any{}
 
@@ -37,15 +38,15 @@ func createBlockControllerTester(t *testing.T, options string) (*fxtest.App, tes
 	app := fxtest.New(t,
 		config.ProvideFromJsonString(string(configString)),
 		fx.Provide(
-			core.CreateTestClockService,
+			clock.CreateTestClockService,
 			CreateHttpService,
 			unwrapHttpRouter,
 			annotateController(CreatePaintController),
 		),
 		core.Fx(),
-		fx.Invoke(func(s StartControllersParam, phs HttpService, cs core.ClockService) {
+		fx.Invoke(func(s StartControllersParam, phs HttpService, cs clock.ClockService) {
 			hs = phs
-			tc = cs.(*core.TestClockService)
+			tc = cs.(*clock.TestClockService)
 		}),
 	).RequireStart()
 

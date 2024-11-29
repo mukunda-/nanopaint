@@ -11,8 +11,8 @@ import (
 	"strconv"
 
 	"github.com/labstack/echo/v4"
+	"go.mukunda.com/nanopaint/clock"
 	"go.mukunda.com/nanopaint/config"
-	"go.mukunda.com/nanopaint/core"
 	"go.uber.org/fx"
 )
 
@@ -79,7 +79,7 @@ func createServer(e *echo.Echo, port int) (*http.Server, net.Listener, int) {
 }
 
 // ---------------------------------------------------------------------------------------
-func CreateHttpService(lc fx.Lifecycle, config config.Config, clock core.ClockService) HttpService {
+func CreateHttpService(lc fx.Lifecycle, config config.Config, clock clock.ClockService) HttpService {
 	log.Infoln(nil, "Creating HTTP Service.")
 	hs := &httpService{
 		E:           echo.New(),
