@@ -11,11 +11,12 @@ import (
 
 	"go.mukunda.com/nanopaint/cat"
 	"go.mukunda.com/nanopaint/core"
+	"go.mukunda.com/nanopaint/core/block2"
 )
 
-type BlockController interface {
+type PaintController interface {
 	GetBlock(c Ct) error
-	SetBlock(c Ct) error
+	Paint(c Ct) error
 }
 
 type blockController struct {
@@ -23,10 +24,10 @@ type blockController struct {
 }
 
 var reValidCoords = regexp.MustCompile(`^[0-9A-Za-z_-]*$`)
-var reValidColor = regexp.MustCompile(`^[a-fA-F0-9]{6}$`)
+var reValidColor = regexp.MustCompile(`^[a-fA-F0-9]{3}$`)
 
 // ---------------------------------------------------------------------------------------
-func CreatePaintController(routes Router, blocks core.BlockService, hs HttpService) BlockController {
+func CreatePaintController(routes Router, blocks core.BlockService, hs HttpService) PaintController {
 	pc := &blockController{
 		blocks: blocks,
 	}
@@ -35,16 +36,16 @@ func CreatePaintController(routes Router, blocks core.BlockService, hs HttpServi
 	routes.GET("/api/block/:coords", pc.GetBlock, hs.UseRateLimiter())
 	routes.GET("/api/block/", pc.GetBlock, hs.UseRateLimiter())
 
+	routes.POST("/api/paint/:coords", pc.Paint, hs.UseRateLimiter())
 	// The empty string is not valid for POST, but we still want to customize the error
 	// message (should be 400, not 404).
-	routes.POST("/api/block/:coords", pc.SetBlock, hs.UseRateLimiter())
-	routes.POST("/api/block/", pc.SetBlock, hs.UseRateLimiter())
+	routes.POST("/api/paint/", pc.Paint, hs.UseRateLimiter())
 
 	return &blockController{}
 }
 
 // ---------------------------------------------------------------------------------------
-func encodePixels(pixels []core.Pixel) string {
+func encodePixels(pixels []block2.Pixel) string {
 	byteArray := make([]byte, len(pixels)*4)
 	for i, pixel := range pixels {
 		s := i * 4
@@ -68,14 +69,17 @@ func catchMissingField(fieldName, value string) {
 }
 
 // ---------------------------------------------------------------------------------------
-func parseColor(color string) core.Color {
-	cat.BadIf(!reValidColor.MatchString(color), "Invalid color. Must be in the format RRGGBB.")
+func parseColor(color string) block2.Color {
+	cat.BadIf(!reValidColor.MatchString(color), "Invalid color. Must be 3 hex digits `rgb`.")
 	// convert color from a RRGGBB string to a 32-bit integer
 	result, err := strconv.ParseInt(color, 16, 32)
-	if err != nil {
-		panic("unexpected strconv error in parseColor")
-	}
-	return core.Color(result)
+	cat.Catch(err, "Unexpected parse failure in api.parseColor.")
+
+	r := (result & 0xF00) >> 8
+	g := (result & 0xF0) >> 4
+	b := result & 0xF
+
+	return block2.Color(r | g<<4 | b<<8)
 }
 
 // ---------------------------------------------------------------------------------------
@@ -83,12 +87,10 @@ func (pc *blockController) GetBlock(c Ct) error {
 	coordsString := c.Param("coords")
 	catchInvalidCoords(coordsString)
 
-	coords := core.CoordsFromString(coordsString)
+	coords := block2.CoordsFromBase64(coordsString)
 	block, err := pc.blocks.GetBlock(coords)
-	cat.NotFoundIf(err == core.ErrBlockNotFound, "Block not found.")
-	if err != nil {
-		panic("unexpected error from core.GetBlock")
-	}
+	cat.NotFoundIf(err == block2.ErrBlockNotFound, "Block not found.")
+	cat.Catch(err, "unexpected error from core.GetBlock")
 
 	var response struct {
 		baseResponse
@@ -102,36 +104,40 @@ func (pc *blockController) GetBlock(c Ct) error {
 	return c.JSON(200, response)
 }
 
-type setBlockInput struct {
+type paintInput struct {
 	Color string `json:"color"`
 }
 
 // ---------------------------------------------------------------------------------------
-func (pc *blockController) SetBlock(c Ct) error {
-	var body setBlockInput
+func (pc *blockController) Paint(c Ct) error {
+	var body paintInput
 	c.Bind(&body)
 	catchMissingField("color", body.Color)
 
 	coordsString := c.Param("coords")
-	catchInvalidCoords(coordsString)
 
-	coords := core.CoordsFromString(coordsString)
-	err := pc.blocks.SetBlock(coords, parseColor(body.Color))
-	cat.NotFoundIf(err == core.ErrBlockNotFound, "Block not found.")
-	if err == core.ErrBlockIsDry {
+	coords := block2.CoordsFromBase64(coordsString)
+
+	err := pc.blocks.SetPixel(coords, parseColor(body.Color))
+	if err == block2.ErrPixelIsDry {
 		return c.JSON(400, baseResponse{
-			Code:    "BLOCK_DRY",
-			Message: "Block is dry.",
+			Code:    "PIXEL_DRY",
+			Message: "Pixel is dry and cannot be updated.",
 		})
 		// } else if err == core.ErrBlockParentNotDry {
 		// 	return c.JSON(400, baseResponse{
 		// 		Code:    "BLOCK_PARENT_NOT_DRY",
 		// 		Message: "Parent block is not dry.",
 		// 	})
+	} else if err == block2.ErrMaxDepthExceeded {
+		return c.JSON(400, baseResponse{
+			Code:    "MAX_DEPTH_EXCEEDED",
+			Message: "Max depth exceeded.",
+		})
 	}
-	cat.Catch(err, "Failed to set block.")
+	cat.Catch(err, "Failed to set pixel.")
 
 	return c.JSON(200, baseResponse{
-		Code: "BLOCK_SET",
+		Code: "PIXEL_SET",
 	})
 }

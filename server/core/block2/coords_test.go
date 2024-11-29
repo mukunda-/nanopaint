@@ -5,6 +5,7 @@
 package block2
 
 import (
+	"encoding/base64"
 	"fmt"
 	"testing"
 
@@ -178,4 +179,44 @@ func TestCoordsAreImmutable(t *testing.T) {
 	coords = coordsFromBits("100011", "100011")
 	coords.Down(1, 1)
 	assert.Equal(t, "100011,100011", coordsToString(coords))
+}
+
+func TestCoordsBase64Sanitization(t *testing.T) {
+
+	/////////////////////////////////////////////
+	// Invalid characters should panic.
+	assert.Panics(t, func() {
+		CoordsFromBase64("🐸")
+	})
+
+	for i := 0; i < 3; i++ {
+		/////////////////////////////////////////////
+		// Invalid bitmod on empty coords should panic.
+		assert.Panics(t, func() {
+			CoordsFromBase64(base64.URLEncoding.EncodeToString([]byte{byte(i)}))
+
+		})
+	}
+
+	for i := 2; i < 8; i++ {
+		/////////////////////////////////////////////
+		// Reserved bits in the last byte should panic.
+		assert.Panics(t, func() {
+			CoordsFromBase64(base64.URLEncoding.EncodeToString([]byte{0, 3 | (1 << i)}))
+		})
+	}
+
+	assert.NotPanics(t, func() {
+		CoordsFromBase64(base64.URLEncoding.EncodeToString([]byte{0xFF, 3}))
+	})
+
+	for i := 0; i <= 2; i++ {
+		/////////////////////////////////////////////
+		// Unused bits in the last byte should panic.
+		// bitmod must cover all set bits in the last coord byte.
+		assert.Panics(t, func() {
+			CoordsFromBase64(base64.URLEncoding.EncodeToString([]byte{0xFF, byte(i)}))
+		})
+	}
+
 }

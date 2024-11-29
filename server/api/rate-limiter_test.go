@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"go.mukunda.com/nanopaint/clock"
+	"go.mukunda.com/nanopaint/core/clock"
 )
 
 // ///////////////////////////////////////////////////////////////////////////////////////

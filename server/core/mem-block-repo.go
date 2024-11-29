@@ -4,10 +4,11 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 package core
 
+/*
 import (
 	"fmt"
 
-	"go.mukunda.com/nanopaint/clock"
+	"go.mukunda.com/nanopaint/core/clock"
 )
 
 // A block repository that doesn't use persistent storage (in-memory). For testing.
@@ -158,3 +159,4 @@ func (r *MemBlockRepo) DryPixels() {
 		}
 	}
 }
+*/

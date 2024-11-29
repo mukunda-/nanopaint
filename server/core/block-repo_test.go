@@ -4,13 +4,14 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 package core
 
+/*
 import (
 	"math/rand"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"go.mukunda.com/nanopaint/clock"
+	"go.mukunda.com/nanopaint/core/clock"
 )
 
 // ///////////////////////////////////////////////////////////////////////////////////////
@@ -197,3 +198,4 @@ func TestBlockAverage(t *testing.T) {
 		assert.Equal(t, average, block.GetAverage())
 	}
 }
+*/

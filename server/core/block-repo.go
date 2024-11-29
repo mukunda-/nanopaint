@@ -4,6 +4,7 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 package core
 
+/*
 import "errors"
 
 type (
@@ -80,3 +81,4 @@ func GetDryTime(coords Coords) int {
 
 	return DEFAULT_DRY_TIME[level]
 }
+*/

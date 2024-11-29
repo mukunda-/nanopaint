@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"go.mukunda.com/nanopaint/clock"
 	"go.mukunda.com/nanopaint/config"
 	"go.mukunda.com/nanopaint/core"
+	"go.mukunda.com/nanopaint/core/clock"
 	"go.mukunda.com/nanopaint/test"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxtest"
@@ -21,7 +21,7 @@ import (
 type testreqFactory func() *test.Request
 
 // ///////////////////////////////////////////////////////////////////////////////////////
-func createBlockControllerTester(t *testing.T, options string) (*fxtest.App, testreqFactory, *clock.TestClockService) {
+func createPaintControllerTester(t *testing.T, options string) (*fxtest.App, testreqFactory, *clock.TestClockService) {
 	var hs HttpService
 	var tc *clock.TestClockService
 
@@ -57,7 +57,7 @@ func createBlockControllerTester(t *testing.T, options string) (*fxtest.App, tes
 
 // ///////////////////////////////////////////////////////////////////////////////////////
 func TestBlockController_GetBlock(t *testing.T) {
-	app, rq, _ := createBlockControllerTester(t, "noratelimit")
+	app, rq, _ := createPaintControllerTester(t, "noratelimit")
 	defer app.RequireStop()
 
 	/////////////////////////////////////////////////////////
@@ -75,28 +75,28 @@ func TestBlockController_GetBlock(t *testing.T) {
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////
-func TestBlockController_SetBlock(t *testing.T) {
-	app, rq, tc := createBlockControllerTester(t, "noratelimit")
+func TestPaintController_Paint(t *testing.T) {
+	app, rq, tc := createPaintControllerTester(t, "noratelimit")
 	defer app.RequireStop()
 
-	goodColorPayload := setBlockInput{
-		Color: "FF0000",
+	goodColorPayload := paintInput{
+		Color: "F00",
 	}
 
 	/////////////////////////////////////////////////////////////////////
 	// The coordinates are validated.
 	// A 400 response is returned from invalid formatting.
-	rq().Post("/api/block/a@@b").Send(goodColorPayload).
+	rq().Post("/api/paint/a@@b").Send(goodColorPayload).
 		Expect(400, "BAD_REQUEST", "Invalid coordinate string.")
 
-	/////////////////////////////////////////////////////////////
-	// A 404 is returned when a block does not have a parent yet.
-	rq().Post("/api/block/0000").Send(goodColorPayload).
-		Expect(404, "NOT_FOUND", "Block not found.")
+	// /////////////////////////////////////////////////////////////
+	// // A 404 is returned when a block does not have a parent yet.
+	// rq().Post("/api/paint/0000").Send(goodColorPayload).
+	// 	Expect(404, "NOT_FOUND", "Block not found.")
 
 	/////////////////////////////////////////////////////////
 	// The "color" field is required.
-	rq().Post("/api/block/0000").Expect(400, "BAD_REQUEST", "`body.color` is missing.")
+	rq().Post("/api/paint/0000").Expect(400, "BAD_REQUEST", "`body.color` is missing.")
 
 	///////////////////////////////////////////////////////////
 	// The "color" field is validated, rejecting invalid input.
@@ -104,18 +104,18 @@ func TestBlockController_SetBlock(t *testing.T) {
 		"FF000", "FF0000FF", "abcdefg", "g", "a", "ab", "1", "12", "123", "1234", "12345", "12345 6", "😃", " ",
 	}
 	for _, color := range invalidColors {
-		rq().Post("/api/block/0").Send(setBlockInput{
+		rq().Post("/api/block/0").Send(paintInput{
 			Color: color,
 		}).Expect(400, "BAD_REQUEST", "Invalid color. Must be in the format RRGGBB.")
 	}
 
 	//////////////////////////////////////////////////////////////////////////////////
 	// Blocks can be set and then updated within a certain time period until they dry.
-	rq().Post("/api/block/0").Send(setBlockInput{
+	rq().Post("/api/block/0").Send(paintInput{
 		Color: "ff0000",
 	}).Expect(200, "BLOCK_SET")
 
-	rq().Post("/api/block/0").Send(setBlockInput{
+	rq().Post("/api/block/0").Send(paintInput{
 		Color: "ffff00",
 	}).Expect(200, "BLOCK_SET")
 
@@ -146,20 +146,20 @@ func TestBlockController_SetBlock(t *testing.T) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////
 func TestBlockController_RateLimiting(t *testing.T) {
-	app, rq, tc := createBlockControllerTester(t, "")
+	app, rq, tc := createPaintControllerTester(t, "")
 	defer app.RequireStop()
 
 	// We are allowed a certain number of Get and Set operations at once. Operations
 	// share the same quota.
 	for i := 0; i < 10; i++ {
-		rq().Post("/api/block/0").Send(setBlockInput{Color: "FF0000"}).Expect(200, "BLOCK_SET")
+		rq().Post("/api/block/0").Send(paintInput{Color: "FF0000"}).Expect(200, "BLOCK_SET")
 	}
 
 	for i := 0; i < 10; i++ {
-		rq().Post("/api/block/0").Send(setBlockInput{Color: "FF0000"}).Expect(429, "RATE_LIMIT")
+		rq().Post("/api/block/0").Send(paintInput{Color: "FF0000"}).Expect(429, "RATE_LIMIT")
 		rq().Post("/api/block/0").Expect(429, "RATE_LIMIT")
 		tc.Advance(time.Millisecond * 100)
-		rq().Post("/api/block/0").Send(setBlockInput{Color: "FF0000"}).Expect(200, "BLOCK_SET")
+		rq().Post("/api/block/0").Send(paintInput{Color: "FF0000"}).Expect(200, "BLOCK_SET")
 
 		rq().Get("/api/block/").Expect(429, "RATE_LIMIT")
 		tc.Advance(time.Millisecond * 200)

@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"go.mukunda.com/nanopaint/clock"
 	"go.mukunda.com/nanopaint/config"
+	"go.mukunda.com/nanopaint/core/clock"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxtest"
 )

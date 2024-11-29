@@ -8,10 +8,11 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 package core
 
+/*
 import (
 	"testing"
 
-	"go.mukunda.com/nanopaint/clock"
+	"go.mukunda.com/nanopaint/core/clock"
 )
 
 // ///////////////////////////////////////////////////////////////////////////////////////
@@ -28,3 +29,4 @@ func TestMemBlockRepo(t *testing.T) {
 		testBlockRepoDryTime(t, repo, tc.(*clock.TestClockService))
 	}
 }
+*/

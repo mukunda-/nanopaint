@@ -5,8 +5,9 @@
 package core
 
 import (
-	"go.mukunda.com/nanopaint/clock"
 	"go.mukunda.com/nanopaint/config"
+	"go.mukunda.com/nanopaint/core/block2"
+	"go.mukunda.com/nanopaint/core/clock"
 	"go.uber.org/fx"
 )
 
@@ -17,10 +18,10 @@ var defaultCoreConfig = coreConfig{
 }
 
 // ---------------------------------------------------------------------------------------
-func createBlockRepo(config *coreConfig, clock clock.ClockService) BlockRepo {
+func createBlockRepo(config *coreConfig, clock clock.ClockService) block2.BlockRepo {
 
 	if config.storageType == "mem" {
-		return CreateMemBlockRepo(clock)
+		return block2.CreateMemBlockRepo(clock)
 	} else {
 		panic("unknown block storage type")
 	}

@@ -7,7 +7,7 @@ package api
 import (
 	"sync"
 
-	"go.mukunda.com/nanopaint/clock"
+	"go.mukunda.com/nanopaint/core/clock"
 )
 
 // This is a lightweight rate limit for high traffic performance. The main caveat is that

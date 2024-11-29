@@ -5,6 +5,7 @@
 package block2
 
 import (
+	"encoding/base64"
 	"slices"
 
 	"go.mukunda.com/nanopaint/cat"
@@ -150,13 +151,27 @@ func (c Coords) ToBytes() []byte {
 
 // ---------------------------------------------------------------------------------------
 func CoordsFromBytes(bytes []byte) Coords {
+	cat.BadIf(len(bytes) == 0, "invalid coords: empty string")
 	c := Coords{
 		Bitmod: bytes[len(bytes)-1],
 		Coords: bytes[:len(bytes)-1],
 	}
 
-	cat.BadIf(len(c.Coords) == 0 && c.Bitmod != 3, "bitmod must be 3 for zero coords")
-	cat.BadIf(c.Bitmod > 3, "bitmod must be 3 or less")
+	cat.BadIf(len(c.Coords) == 0 && c.Bitmod != 3, "invalid coords: bitmod must be 3 for zero coords")
+	cat.BadIf(c.Bitmod&0b11111100 != 0, "invalid coords: reserved bits set")
+	if len(c.Coords) > 0 {
+		badmask := byte(8 >> (c.Bitmod + 1))
+		badmask |= badmask << 4
+
+		cat.BadIf(c.Coords[len(c.Coords)-1]&badmask != 0, "invalid coords: unused bits set")
+	}
 
 	return c
+}
+
+// ---------------------------------------------------------------------------------------
+func CoordsFromBase64(str string) Coords {
+	bytes, err := base64.URLEncoding.DecodeString(str)
+	cat.BadIf(err != nil, "invalid coords: failed parsing base64 string")
+	return CoordsFromBytes(bytes)
 }

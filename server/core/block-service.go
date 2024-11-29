@@ -4,20 +4,23 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 package core
 
-import "go.mukunda.com/nanopaint/cat"
+import (
+	"go.mukunda.com/nanopaint/cat"
+	"go.mukunda.com/nanopaint/core/block2"
+)
 
 type (
 	BlockService interface {
-		GetBlock(coords Coords) (*Block, error)
-		SetBlock(coords Coords, color Color) error
+		GetBlock(coords block2.Coords) (*block2.Block, error)
+		SetPixel(coords block2.Coords, color block2.Color) error
 	}
 
 	blockService struct {
-		repo BlockRepo
+		repo block2.BlockRepo
 	}
 )
 
-func CreateBlockService(repo BlockRepo) BlockService {
+func CreateBlockService(repo block2.BlockRepo) BlockService {
 	return &blockService{
 		repo: repo,
 	}
@@ -26,10 +29,10 @@ func CreateBlockService(repo BlockRepo) BlockService {
 // ---------------------------------------------------------------------------------------
 // Returns a block or ErrBlockNotFound if the coordinates are invalid.
 // Other errors are panics.
-func (s *blockService) GetBlock(coords Coords) (*Block, error) {
+func (s *blockService) GetBlock(coords block2.Coords) (*block2.Block, error) {
 	block, err := s.repo.GetBlock(coords)
 	if err != nil {
-		if err == ErrBlockNotFound {
+		if err == block2.ErrBlockNotFound {
 			return nil, err
 		}
 		cat.Catch(err, "Failed to get block.")
@@ -44,9 +47,9 @@ func (s *blockService) GetBlock(coords Coords) (*Block, error) {
 //
 //	ErrBlockNotFound: the parent doesn't exist.
 //	ErrBlockIsDry: the block is already dry and cannot be updated.
-func (s *blockService) SetBlock(coords Coords, color Color) error {
-	err := s.repo.SetBlock(coords, color)
-	if err == ErrBlockNotFound || err == ErrBlockIsDry {
+func (s *blockService) SetPixel(coords block2.Coords, color block2.Color) error {
+	err := s.repo.SetPixel(coords, color)
+	if err == block2.ErrPixelIsDry || err == block2.ErrMaxDepthExceeded {
 		// Filter for these error types only. Others panic.
 		return err
 	}
