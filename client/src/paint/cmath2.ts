@@ -9,7 +9,7 @@
 export let MaxPrecision = 128; // 384-bit
 
 //----------------------------------------------------------------------------------------
-export class Coords {
+export class Coord {
    point: number;
    value: bigint;
 
@@ -25,11 +25,11 @@ export class Coords {
       }
    }
 
-   add(b: Coords|string): Coords {
+   add(b: Coord|string): Coord {
       return add(this, b);
    }
 
-   sub(b: Coords|string): Coords {
+   sub(b: Coord|string): Coord {
       return sub(this, b);
    }
 
@@ -95,7 +95,7 @@ function getPrecision(): number {
 }
 
 //----------------------------------------------------------------------------------------
-function parseCoords(coords: string): Coords {
+function parseCoords(coords: string): Coord {
    const sign = coords.startsWith("-");
    coords = sign ? coords.substring(1) : coords;
    let frac = coords.indexOf(".");
@@ -115,22 +115,22 @@ function parseCoords(coords: string): Coords {
       value += BigInt(chunk) << BigInt(i * 3);
    }
 
-   return new Coords(sign ? -value : value, frac);
+   return new Coord(sign ? -value : value, frac);
 }
 
 //----------------------------------------------------------------------------------------
-function truncate(value: Coords, maxPoint: number): Coords {
+function truncate(value: Coord, maxPoint: number): Coord {
    let v = value.value, p = value.point;
    if (p > maxPoint) {
       const discardDigits = p - maxPoint;
       v >>= BigInt(8) * BigInt(discardDigits);
       p -= discardDigits;
    }
-   return new Coords(v, p);
+   return new Coord(v, p);
 }
 
 //----------------------------------------------------------------------------------------
-function add(a: Coords|string, b: Coords|string) {
+function add(a: Coord|string, b: Coord|string) {
    if (typeof a == "string") a = parseCoords(a);
    if (typeof b == "string") b = parseCoords(b);
 
@@ -142,11 +142,11 @@ function add(a: Coords|string, b: Coords|string) {
       bv <<= BigInt(3) * BigInt(point - b.point);
    }
 
-   return truncate(new Coords(av + bv, point), MaxPrecision);
+   return truncate(new Coord(av + bv, point), MaxPrecision);
 }
 
 //----------------------------------------------------------------------------------------
-function sub(a: Coords|string, b: Coords|string): Coords {
+function sub(a: Coord|string, b: Coord|string): Coord {
    if (typeof a == "string") a = parseCoords(a);
    if (typeof b == "string") b = parseCoords(b);
 
@@ -154,11 +154,11 @@ function sub(a: Coords|string, b: Coords|string): Coords {
 }
 
 //----------------------------------------------------------------------------------------
-function mul(a: Coords|string, b: Coords|string): Coords {
+function mul(a: Coord|string, b: Coord|string): Coord {
    if (typeof a == "string") a = parseCoords(a);
    if (typeof b == "string") b = parseCoords(b);
 
-   return truncate(new Coords(a.value * b.value, a.point + b.point), MaxPrecision);
+   return truncate(new Coord(a.value * b.value, a.point + b.point), MaxPrecision);
 }
 
 
@@ -172,9 +172,9 @@ function mul(a: Coords|string, b: Coords|string): Coords {
 // }
 
 //----------------------------------------------------------------------------------------
-function negate(a: Coords|string): Coords {
+function negate(a: Coord|string): Coord {
    if (typeof a == "string") a = parseCoords(a);
-   return new Coords(-a.value, a.point);
+   return new Coord(-a.value, a.point);
 }
 
 //----------------------------------------------------------------------------------------

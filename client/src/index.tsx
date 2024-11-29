@@ -38,13 +38,7 @@ function Main() {
       </div>
       <div className="text-sm">
          <p className="mb-3">
-            Imagine a canvas with infinite resolution, and anyone can paint on it.
-         </p>
-         <p className="mb-3">
-            When someone paints, it will be wet for a short period before drying. Once dry, you can only paint the same area at a deeper resolution, the units of paint getting smaller and smaller.
-         </p>
-         <p>
-            The smallest units are over eighty orders of magnitude smaller than atoms.
+            When someone paints, it will be wet for a short period before drying. Once dry, you can only paint the same area at a deeper resolution, the pixels getting smaller and smaller until you're working with atoms.
          </p>
       </div>
    </main>;

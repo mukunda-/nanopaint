@@ -4,10 +4,21 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 package main
 
-import "go.uber.org/fx"
+import (
+	"go.mukunda.com/nanopaint/api"
+	"go.mukunda.com/nanopaint/config"
+	"go.mukunda.com/nanopaint/core"
+	"go.mukunda.com/nanopaint/core/clock"
+	"go.uber.org/fx"
+)
 
 // ---------------------------------------------------------------------------------------
 // Just an entry point. We'll keep this file minimal.
 func main() {
-	fx.New().Run()
+	fx.New(
+		config.ProvideFromYamlString(``),
+		fx.Provide(clock.CreateSystemClockService),
+		core.Fx(),
+		api.Fx(),
+	).Run()
 }

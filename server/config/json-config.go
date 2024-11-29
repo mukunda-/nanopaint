@@ -56,7 +56,7 @@ func (yc *jsonConfig) Load(key string, result any) {
 	section, ok := allContent[key]
 
 	if !ok {
-		log.Infoln(nil, "Config key not found:", key)
+		log.Infoln(nil, "Config key not set:", key)
 		return
 	}
 

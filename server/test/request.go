@@ -264,7 +264,7 @@ func (r *Request) Expect(status int, code string, msg ...string) *Request {
 		}
 
 		if exmsg != "" {
-			assert.Equal(r.T, exmsg, result.Message)
+			assert.Regexp(r.T, exmsg, result.Message)
 		}
 	}
 

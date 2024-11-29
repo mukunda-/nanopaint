@@ -43,6 +43,7 @@ const DefaultMemBlockRepoMaxDepth = 100
 
 // ---------------------------------------------------------------------------------------
 func CreateMemBlockRepo(cs ClockService) BlockRepo {
+	log.Warnln(nil, "Using in-memory blockrepo. This implementation is for testing purposes and is not persisted.")
 	blocks := make(map[string]*MemBlock)
 	return &MemBlockRepo{
 		Clock:    cs,

@@ -175,3 +175,8 @@ func CoordsFromBase64(str string) Coords {
 	cat.BadIf(err != nil, "invalid coords: failed parsing base64 string")
 	return CoordsFromBytes(bytes)
 }
+
+// ---------------------------------------------------------------------------------------
+func (c Coords) ToBase64() string {
+	return base64.URLEncoding.EncodeToString(c.ToBytes())
+}

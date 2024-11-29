@@ -2,7 +2,7 @@
 // Nanopaint (C) 2024 Mukunda Johnson (me@mukunda.com)
 // Distributed under the MIT license. See LICENSE.txt for details.
 // ///////////////////////////////////////////////////////////////////////////////////////
-import {Cmath, Coords} from "./cmath2";
+import {Cmath, Coord} from "./cmath2";
 
 describe("cmath", () => {
 
@@ -79,7 +79,7 @@ describe("cmath", () => {
    test("doubling numbers", () => {
       // For this test, the number doubles each iteration. Every 3 iterations, we expect
       // the number of zeroes to change. This is building a huge number (~2^1000)
-      let num = new Coords("0.000001");
+      let num = new Coord("0.000001");
       let expectedZeroes = -6;
       for (let i = 0; i < 1000; i++) {
          for (let j = 0; j < 3; j++) {

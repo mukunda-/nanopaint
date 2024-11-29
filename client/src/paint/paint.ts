@@ -4,12 +4,12 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 
 // painting/rendering engine.
-import { Coords } from "./cmath";
+import { Coord } from "./cmath2";
 
 // The paint engine.
 class Paint {
    bufferElement: HTMLCanvasElement;
-   coords: Coords;
+   pan: Coord[];
    zoom = 0.0;
    dirty: Record<string,boolean> = {};
 
@@ -17,6 +17,7 @@ class Paint {
       this.bufferElement = document.createElement("canvas");
       this.bufferElement.width = 1024;
       this.bufferElement.height = 1024;
+      this.pan = [new Coord("0.4"), new Coord("0.4")];
    }
 
    render() {

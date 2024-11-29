@@ -19,7 +19,7 @@ type PaintController interface {
 	Paint(c Ct) error
 }
 
-type blockController struct {
+type paintController struct {
 	blocks core.BlockService
 }
 
@@ -28,7 +28,7 @@ var reValidColor = regexp.MustCompile(`^[a-fA-F0-9]{3}$`)
 
 // ---------------------------------------------------------------------------------------
 func CreatePaintController(routes Router, blocks core.BlockService, hs HttpService) PaintController {
-	pc := &blockController{
+	pc := &paintController{
 		blocks: blocks,
 	}
 
@@ -41,7 +41,7 @@ func CreatePaintController(routes Router, blocks core.BlockService, hs HttpServi
 	// message (should be 400, not 404).
 	routes.POST("/api/paint/", pc.Paint, hs.UseRateLimiter())
 
-	return &blockController{}
+	return &paintController{}
 }
 
 // ---------------------------------------------------------------------------------------
@@ -83,11 +83,10 @@ func parseColor(color string) block2.Color {
 }
 
 // ---------------------------------------------------------------------------------------
-func (pc *blockController) GetBlock(c Ct) error {
+func (pc *paintController) GetBlock(c Ct) error {
 	coordsString := c.Param("coords")
-	catchInvalidCoords(coordsString)
-
 	coords := block2.CoordsFromBase64(coordsString)
+
 	block, err := pc.blocks.GetBlock(coords)
 	cat.NotFoundIf(err == block2.ErrBlockNotFound, "Block not found.")
 	cat.Catch(err, "unexpected error from core.GetBlock")
@@ -109,7 +108,7 @@ type paintInput struct {
 }
 
 // ---------------------------------------------------------------------------------------
-func (pc *blockController) Paint(c Ct) error {
+func (pc *paintController) Paint(c Ct) error {
 	var body paintInput
 	c.Bind(&body)
 	catchMissingField("color", body.Color)
