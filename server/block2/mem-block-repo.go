@@ -1,7 +1,10 @@
+// ///////////////////////////////////////////////////////////////////////////////////////
+// Nanopaint (C) 2024 Mukunda Johnson (me@mukunda.com)
+// Distributed under the MIT license. See LICENSE.txt for details.
+// ///////////////////////////////////////////////////////////////////////////////////////
 package block2
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -175,11 +178,16 @@ func (r *MemBlockRepo) SetPixel(coords Coords, color Color) error {
 	pixelIndex := coords.PixelIndex()
 
 	if block.Pixels[pixelIndex]&PIXEL_DRY != 0 {
-		return ErrBlockIsDry
+		return ErrPixelIsDry
 	}
 
 	// Mask out existing color.
 	pixelValue := block.Pixels[pixelIndex] & 0xF000FFFF
+
+	if pixelValue&0xF000 == 0xF000 {
+		// Lower layer is overwriting this pixel completely. Treat it as dry.
+		return ErrPixelIsDry
+	}
 
 	// Set new color.
 	pixelValue |= Pixel(color) << 16
@@ -188,8 +196,6 @@ func (r *MemBlockRepo) SetPixel(coords Coords, color Color) error {
 	block.Pixels[pixelIndex] = pixelValue
 
 	block.DryTime = r.Clock.Now().UnixMilli() + 5000 // Debug. This is computed by layer
-	coords2 := coords
-	fmt.Println(coords2)
 	r.bubbleColor(coords)
 
 	return nil

@@ -10,19 +10,21 @@ package core
 
 import (
 	"testing"
+
+	"go.mukunda.com/nanopaint/clock"
 )
 
 // ///////////////////////////////////////////////////////////////////////////////////////
 func TestMemBlockRepo(t *testing.T) {
 	{
-		clock := CreateTestClockService()
-		repo := CreateMemBlockRepo(clock)
-		testBlockRepoSetGet(t, repo, clock.(*TestClockService))
+		tc := clock.CreateTestClockService()
+		repo := CreateMemBlockRepo(tc)
+		testBlockRepoSetGet(t, repo, tc.(*clock.TestClockService))
 	}
 
 	{
-		clock := CreateTestClockService()
-		repo := CreateMemBlockRepo(clock)
-		testBlockRepoDryTime(t, repo, clock.(*TestClockService))
+		tc := clock.CreateTestClockService()
+		repo := CreateMemBlockRepo(tc)
+		testBlockRepoDryTime(t, repo, tc.(*clock.TestClockService))
 	}
 }

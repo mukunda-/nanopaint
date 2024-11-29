@@ -4,7 +4,11 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 package core
 
-import "fmt"
+import (
+	"fmt"
+
+	"go.mukunda.com/nanopaint/clock"
+)
 
 // A block repository that doesn't use persistent storage (in-memory). For testing.
 // Single threaded. Not thread safe.
@@ -12,14 +16,14 @@ import "fmt"
 // ---------------------------------------------------------------------------------------
 type (
 	MemBlockRepo struct {
-		Clock   ClockService
+		Clock   clock.ClockService
 		Blocks  map[string]*Block
 		DryTime map[string]int64
 	}
 )
 
 // ---------------------------------------------------------------------------------------
-func CreateMemBlockRepo(cs ClockService) BlockRepo {
+func CreateMemBlockRepo(cs clock.ClockService) BlockRepo {
 	log.Warnln(nil, "Using in-memory blockrepo. This implementation is for testing purposes and is not persisted.")
 	log.WithField(nil, "clock", fmt.Sprintf("%T", cs)).
 		Debugln("Creating MemBlockRepo")

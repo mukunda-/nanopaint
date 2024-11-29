@@ -1,7 +1,13 @@
+// ///////////////////////////////////////////////////////////////////////////////////////
+// Nanopaint (C) 2024 Mukunda Johnson (me@mukunda.com)
+// Distributed under the MIT license. See LICENSE.txt for details.
+// ///////////////////////////////////////////////////////////////////////////////////////
 package block2
 
 import (
 	"slices"
+
+	"go.mukunda.com/nanopaint/cat"
 )
 
 // ---------------------------------------------------------------------------------------
@@ -39,20 +45,16 @@ func (c Coords) BitLength() int {
 // ---------------------------------------------------------------------------------------
 // Goes up 6 levels.
 func (c Coords) ParentOfPixel() Coords {
-	if c.BitLength() < 6 {
-		// must have bit length >= 6
-		panic("invalid pixel coordinate")
-	}
+	// must have bit length >= 6
+	cat.BadIf(c.BitLength() < 6, "pixel coordinates out of range")
 	return c.Up(6)
 }
 
 // ---------------------------------------------------------------------------------------
 // Gets the lowest 6 bits of X and Y.
 func (c Coords) PixelIndex() int {
-	if c.BitLength() < 6 {
-		// must have bit length >= 6
-		panic("invalid pixel coordinate")
-	}
+	// must have bit length >= 6
+	cat.BadIf(c.BitLength() < 6, "pixel coordinates out of range")
 
 	totalBits := c.Bitmod + 1
 	bits := int(c.Coords[len(c.Coords)-1])
@@ -81,9 +83,8 @@ func (c Coords) Up(levels int) Coords {
 	newmod := int(c.Bitmod)
 	newcoords := slices.Clone(c.Coords)
 
-	if c.BitLength() < levels {
-		panic("attempt to get coords parent out of range")
-	}
+	// must have bit length >= 6
+	cat.BadIf(c.BitLength() < levels, "attempt to get coords parent out of range")
 
 	if levels >= 4 {
 		newcoords = newcoords[:len(newcoords)-(levels>>2)]
@@ -118,13 +119,8 @@ func (c Coords) Down(x, y uint8) Coords {
 	coords := slices.Clone(c.Coords)
 	bitmod := int(c.Bitmod)
 
-	if len(coords) == 0 && bitmod != 3 {
-		panic("unexpected coordinate header - bitmod should be 3 for zero coords")
-	}
-
-	if x > 1 || y > 1 {
-		panic("invalid child coordinates, must be 0-1")
-	}
+	cat.Catch(len(coords) == 0 && bitmod != 3, "unexpected coordinate header - bitmod should be 3 for zero coords")
+	cat.BadIf(x > 1 || y > 1, "invalid child coordinates, must be 0-1")
 
 	nextBits := x + (y << 4)
 
@@ -159,13 +155,8 @@ func CoordsFromBytes(bytes []byte) Coords {
 		Coords: bytes[:len(bytes)-1],
 	}
 
-	if len(c.Coords) == 0 && c.Bitmod != 3 {
-		panic("bitmod must be 3 for zero length coords")
-	}
-
-	if c.Bitmod > 3 {
-		panic("bitmod must be 3 or less")
-	}
+	cat.BadIf(len(c.Coords) == 0 && c.Bitmod != 3, "bitmod must be 3 for zero coords")
+	cat.BadIf(c.Bitmod > 3, "bitmod must be 3 or less")
 
 	return c
 }

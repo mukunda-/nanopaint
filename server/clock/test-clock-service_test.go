@@ -2,7 +2,7 @@
 // Nanopaint (C) 2024 Mukunda Johnson (me@mukunda.com)
 // Distributed under the MIT license. See LICENSE.txt for details.
 // ///////////////////////////////////////////////////////////////////////////////////////
-package core
+package clock
 
 import (
 	"testing"
@@ -68,6 +68,7 @@ func TestTestClockThreadSafety(t *testing.T) {
 	assert.Equal(t, startTime.Add(time.Second*1000).Unix(), tc.Now().Unix())
 }
 
+// ///////////////////////////////////////////////////////////////////////////////////////
 func TestTestClockInterval(t *testing.T) {
 
 	{

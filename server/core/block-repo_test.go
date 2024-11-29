@@ -10,10 +10,11 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"go.mukunda.com/nanopaint/clock"
 )
 
 // ///////////////////////////////////////////////////////////////////////////////////////
-func testBlockRepoDryTime(t *testing.T, repo BlockRepo, tcs *TestClockService) {
+func testBlockRepoDryTime(t *testing.T, repo BlockRepo, tcs *clock.TestClockService) {
 	/////////////////////////////////////////////////////////////////////////////////////
 	// The drying time is based on the depth of the block. Currently:
 	// Level 0: 15 seconds
@@ -50,7 +51,7 @@ func testBlockRepoDryTime(t *testing.T, repo BlockRepo, tcs *TestClockService) {
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////
-func testBlockRepoSetGet(t *testing.T, repo BlockRepo, tcs *TestClockService) {
+func testBlockRepoSetGet(t *testing.T, repo BlockRepo, tcs *clock.TestClockService) {
 	////////////////////////////////////////////////////////////
 	// Setting pixels requires an existing parent.
 	// We start with one block at the very top.
