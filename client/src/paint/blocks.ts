@@ -2,11 +2,11 @@
 // Nanopaint (C) 2024 Mukunda Johnson (me@mukunda.com)
 // Distributed under the MIT license. See LICENSE.txt for details.
 // ///////////////////////////////////////////////////////////////////////////////////////
+import { ApiClient } from "./apiclient";
 import { toBase64url } from "./base64";
 import { Coord } from "./cmath2";
 
-// Caching block repository.
-
+// Purpose: Caching block repository.
 
 export function buildCoordString(coords: Coord[], level: number): string|undefined {
    if (coords.length != 2) throw new Error("invalid coords");
@@ -50,18 +50,55 @@ type GetBlockResult = Block | "pending" | undefined;
 type Request = {
    address: string;
    status: "waiting" | "fetching";
-}
+};
 
 //----------------------------------------------------------------------------------------
 export class Blocks {
 
    blocks: Record<string, Block> = {};
    requests: Request[] = [];
+   api: ApiClient;
+   running: boolean;
+
+   constructor(api: ApiClient) {
+      this.api = api;
+   }
+
+   private async runRequests() {
+      if (this.requests.length == 0) return;
+      if (this.running) return;
+      this.running = true;
+
+      try {
+         for (const req of this.requests) {
+            if (req.status == "waiting") {
+               req.status = "fetching";
+               const response = await this.api.getBlock(req.address);
+               if (response.code == "OK") {
+                  this.blocks[req.address] = {
+                     pixels: new Uint32Array(response.data)
+                  };
+               }
+            }
+         }
+      } catch (e) {
+         console.error("Unexpected error in block requests:", e);
+      } finally {
+         this.running = false;
+      }
+
+      this.runRequests();
+   }
 
    //-------------------------------------------------------------------------------------
    async requestBlock(address: string) {
-      const resp = await fetch("server" + "/api/block/" + address);
+      for (const r of this.requests) {
+         if (r.address == address) return; // Already queued.
+      }
 
+      this.requests.push({ address, status: "waiting" });
+
+      this.runRequests();
    }
 
    //-------------------------------------------------------------------------------------

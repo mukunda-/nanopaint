@@ -39,7 +39,7 @@ describe("cmath", () => {
    };
 
    ///////////////////////////////////////////////////////////////////////////////////////
-   test("addition", () => {
+   test("Addition", () => {
       // When the coordinates are converted to strings, they are base 8 with any
       // trailing or leading zeroes discarded. The raw internal representation may have
       // more zeroes, given that there is the fractional point to consider.
@@ -78,7 +78,7 @@ describe("cmath", () => {
    });
 
    ///////////////////////////////////////////////////////////////////////////////////////
-   test("doubling numbers", () => {
+   test("Doubling numbers", () => {
       // For this test, the number doubles each iteration. Every 3 iterations, we expect
       // the number of zeroes to change. This is building a huge number (~2^1000)
       let num = new Coord("0.000001");
@@ -104,7 +104,7 @@ describe("cmath", () => {
    };
 
    ///////////////////////////////////////////////////////////////////////////////////////
-   test("subtraction", () => {
+   test("Subtraction", () => {
       expect(Cmath.sub("2", "2").toString()).toBe("0");
       expect(Cmath.sub("2.0", "2").toString()).toBe("0");
       expect(Cmath.sub("2.0", "2.0").toString()).toBe("0");
@@ -138,7 +138,7 @@ describe("cmath", () => {
    });
 
    ///////////////////////////////////////////////////////////////////////////////////////
-   test("ones and sevens", () => {
+   test("Ones and sevens", () => {
 
       // This test relies on a different perspective that doesn't need math to compute the
       // results.
@@ -164,7 +164,7 @@ describe("cmath", () => {
    });
 
    ///////////////////////////////////////////////////////////////////////////////////////
-   test("multiplication 1", () => {
+   test("Multiplication", () => {
       expect(Cmath.mul("2.0", "2").toString()).toBe("4");
 
       // This number won't overflow max precision because we are multiplying by integers.
@@ -184,7 +184,7 @@ describe("cmath", () => {
       }
    });
 
-   test("truncation", () => {
+   test("Truncation", () => {
       //
       // After operations, fractional digits that exceed the current precision will be
       // discarded.

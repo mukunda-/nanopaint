@@ -20,9 +20,9 @@ function hex64(hex: string): string {
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
-describe("blocks", () => {
+describe("Blocks", () => {
 
-   test("build coord string", () => {
+   test("buildCoordString", () => {
       {
          // 0.4 octal is 0.1 in binary
          // nibbles will be 1000 = 0x80

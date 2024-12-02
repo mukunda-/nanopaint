@@ -7,7 +7,7 @@ import { toBase64url } from "./base64";
 
 describe("base64", () => {
    
-   test("uint8array encoding", () => {
+   test("Uint8array encoding", () => {
 
       {
          // UTF-8 data should not interfere with encoding.

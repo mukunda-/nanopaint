@@ -4,6 +4,7 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 
 // Purpose: Low-level API client for the Nanopaint server.
+// One additional responsibiltiy is handling rate limiting.
 
 type TfetchResponse = {
    code: string;
@@ -38,6 +39,27 @@ async function tfetch(url: string, options: RequestInit): Promise<TfetchResponse
    }
 }
 
+async function delayMillis(ms: number) {
+   return await new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function fetchWithRetry(url: string, options: RequestInit): Promise<TfetchResponse> {
+   let backoff = 100;
+   for (let retries = 0; retries < 5; retries++) {
+      const resp = await tfetch(url, options);
+      if (resp.code == "RATE_LIMITED") {
+         await delayMillis(backoff);
+         backoff *= 2;
+         continue;
+      }
+      return resp;
+   }
+   return {
+      code: "FETCH_FAILED",
+      message: "Retries exceeded.",
+   };
+}
+
 export class ApiClient {
    host: string;
 
@@ -46,7 +68,7 @@ export class ApiClient {
    }
 
    async getBlock(address: string) {
-      return await tfetch("server" + "/api/block/" + address, {
+      return await fetchWithRetry(this.host + "/api/block/" + address, {
          method: "GET"
       });
    }
