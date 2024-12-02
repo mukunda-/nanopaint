@@ -18,6 +18,7 @@ export class Coord {
    // real = value / 2^point
    value: bigint;
 
+   //-------------------------------------------------------------------------------------
    constructor(valueOrString: bigint|string, point?: number) {
       point = point || 0;
       if (typeof valueOrString == "string") {
@@ -30,14 +31,17 @@ export class Coord {
       }
    }
 
+   //-------------------------------------------------------------------------------------
    add(b: Coord|string): Coord {
       return add(this, b);
    }
 
+   //-------------------------------------------------------------------------------------
    sub(b: Coord|string): Coord {
       return sub(this, b);
    }
 
+   //-------------------------------------------------------------------------------------
    toString(): string {
       const point = this.point;
       const sign = this.value < 0;

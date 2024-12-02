@@ -8,6 +8,7 @@ import { Coord } from "./cmath2";
 
 // Purpose: Caching block repository.
 
+//----------------------------------------------------------------------------------------
 export function buildCoordString(coords: Coord[], level: number): string|undefined {
    if (coords.length != 2) throw new Error("invalid coords");
    const b: bigint[] = [coords[0].value, coords[1].value];
@@ -41,6 +42,7 @@ export function buildCoordString(coords: Coord[], level: number): string|undefin
    return toBase64url(resultBytes);
 }
 
+//----------------------------------------------------------------------------------------
 type Block = {
    pixels: Uint32Array;
 };
@@ -60,10 +62,12 @@ export class Blocks {
    api: ApiClient;
    running: boolean;
 
+   //-------------------------------------------------------------------------------------
    constructor(api: ApiClient) {
       this.api = api;
    }
 
+   //-------------------------------------------------------------------------------------
    private async runRequests() {
       if (this.requests.length == 0) return;
       if (this.running) return;
@@ -108,6 +112,7 @@ export class Blocks {
       this.requests.filter(req => req.status == "waiting");
    }
    
+   //-------------------------------------------------------------------------------------
    getBlock(x: Coord, y: Coord, level: number): GetBlockResult {
       if (x.value < 0 || y.value < 0) return undefined;
       if (x.value >> BigInt(x.point) >= BigInt(1) || y.value >> BigInt(y.point) >= BigInt(1)) return undefined;

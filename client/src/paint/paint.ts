@@ -6,6 +6,7 @@
 // painting/rendering engine.
 import { Coord } from "./cmath2";
 
+//----------------------------------------------------------------------------------------
 // The paint engine.
 class Paint {
    bufferElement: HTMLCanvasElement;
@@ -13,17 +14,20 @@ class Paint {
    zoom = 0.0;
    dirty: Record<string,boolean> = {};
 
+   //-------------------------------------------------------------------------------------
    constructor() {
       this.bufferElement = document.createElement("canvas");
       this.bufferElement.width = 1024;
       this.bufferElement.height = 1024;
    }
 
+   //-------------------------------------------------------------------------------------
    render() {
 
    }
 }
 
+//----------------------------------------------------------------------------------------
 function render(canvasId: string, coords: Coord[], zoom: number) {
    // const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
    // const ctx = canvas.getContext("2d");
