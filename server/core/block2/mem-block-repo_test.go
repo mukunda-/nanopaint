@@ -15,6 +15,7 @@ import (
 	"go.mukunda.com/nanopaint/core/clock"
 )
 
+// ///////////////////////////////////////////////////////////////////////////////////////
 func mixColors(colors ...Color) Color {
 	var r, g, b int
 	for _, color := range colors {
@@ -31,6 +32,7 @@ func mixColors(colors ...Color) Color {
 	return Color((b << 8) | (g << 4) | r)
 }
 
+// ///////////////////////////////////////////////////////////////////////////////////////
 func TestMemBlockRepoBubbling(t *testing.T) {
 	clock := clock.CreateTestClockService().(*clock.TestClockService)
 	repo := CreateMemBlockRepo(clock)
@@ -160,6 +162,7 @@ func digCoords(coords Coords, x, y, bits int) Coords {
 	return coords
 }
 
+// ///////////////////////////////////////////////////////////////////////////////////////
 func TestMemBlockBubble2(t *testing.T) {
 
 	// For this test, we're generating a random image and then painting it at 8x resolution.
@@ -217,6 +220,7 @@ func TestMemBlockBubble2(t *testing.T) {
 
 }
 
+// ///////////////////////////////////////////////////////////////////////////////////////
 func TestMemBlockBubble3(t *testing.T) {
 
 	// For this experiment we'll have 3 layers.
@@ -244,6 +248,7 @@ func TestMemBlockBubble3(t *testing.T) {
 
 }
 
+// ///////////////////////////////////////////////////////////////////////////////////////
 func TestMemBlockDrying(t *testing.T) {
 
 	//////////////////////////////////////////////////////////////////////////
@@ -279,6 +284,7 @@ func TestMemBlockDrying(t *testing.T) {
 
 }
 
+// ///////////////////////////////////////////////////////////////////////////////////////
 func TestMemBlockMaxDepth(t *testing.T) {
 	clock := clock.CreateTestClockService().(*clock.TestClockService)
 	repo := CreateMemBlockRepo(clock).(*MemBlockRepo)
@@ -293,4 +299,16 @@ func TestMemBlockMaxDepth(t *testing.T) {
 		strings.Repeat("0", 101)+"0000000",
 		strings.Repeat("0", 101)+"0000000"), Color(0x00F))
 	assert.ErrorIs(t, err, ErrMaxDepthExceeded)
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////
+func TestMemBlockLastUpdated(t *testing.T) {
+
+	clock := clock.CreateTestClockService().(*clock.TestClockService)
+	repo := CreateMemBlockRepo(clock).(*MemBlockRepo)
+
+	repo.SetPixel(coordsFromBits("00000000 000", "00000000 000"), Color(0x00F))
+	block, err := repo.GetBlock(coordsFromBits("00000", "00000"))
+	assert.NoError(t, err)
+	assert.Equal(t, clock.Now().UnixMilli(), block.LastUpdated)
 }

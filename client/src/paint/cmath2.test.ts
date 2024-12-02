@@ -16,7 +16,9 @@ describe("cmath", () => {
    // }
 
    const testSignedFractional = () => {
-      return (Math.random() > 0.5 ? -1 : 1) * Math.floor(Math.random() * 1000000) / Math.pow(8, Math.floor(Math.random() * 8));
+      const signFactor = Math.random() > 0.5 ? -1 : 1;
+      const divisor = Math.pow(8, Math.floor(Math.random() * 8));
+      return signFactor * Math.floor(Math.random() * 1000000) / divisor;
    };
 
    ///////////////////////////////////////////////////////////////////////////////////////
@@ -201,6 +203,6 @@ describe("cmath", () => {
          expect(numZeroes).toBe(i + 1);
       }
       number = Cmath.mul(number, "0.1").toString();
-      expect(number).toBe("0");      
+      expect(number).toBe("0");
    });
 });

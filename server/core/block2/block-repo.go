@@ -11,7 +11,8 @@ type (
 	Pixel uint32
 
 	Block struct {
-		Pixels []Pixel
+		Pixels      []Pixel
+		LastUpdated UnixMillis
 		//DryTime int64 (should this be exposed?)
 	}
 

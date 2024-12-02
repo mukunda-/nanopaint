@@ -3,10 +3,16 @@
 // Distributed under the MIT license. See LICENSE.txt for details.
 // ///////////////////////////////////////////////////////////////////////////////////////
 
+import { delayMillis } from "./common";
+
 // Purpose: Low-level API client for the Nanopaint server.
 // One additional responsibiltiy is handling rate limiting.
 
-type TfetchResponse = {
+export type BlockAddress = string;
+export type PixelAddress = string;
+export type Color = number;
+
+export type ServerResponse = {
    code: string;
    message?: string;
 };
@@ -14,7 +20,7 @@ type TfetchResponse = {
 //----------------------------------------------------------------------------------------
 // This wrapper handles unexpected errors or invalid responses.
 // All valid responses from our server should contain JSON and a code.
-async function tfetch(url: string, options: RequestInit): Promise<TfetchResponse> {
+async function tfetch(url: string, options: RequestInit): Promise<ServerResponse> {
    try {
       const resp = await fetch(url, options);
       try {
@@ -39,11 +45,7 @@ async function tfetch(url: string, options: RequestInit): Promise<TfetchResponse
    }
 }
 
-async function delayMillis(ms: number) {
-   return await new Promise(resolve => setTimeout(resolve, ms));
-}
-
-async function fetchWithRetry(url: string, options: RequestInit): Promise<TfetchResponse> {
+async function fetchWithRetry(url: string, options: RequestInit): Promise<ServerResponse> {
    let backoff = 100;
    for (let retries = 0; retries < 5; retries++) {
       const resp = await tfetch(url, options);
@@ -60,29 +62,33 @@ async function fetchWithRetry(url: string, options: RequestInit): Promise<Tfetch
    };
 }
 
-export class ApiClient {
+//----------------------------------------------------------------------------------------
+export interface ApiClient {
+   getBlock(address: BlockAddress): Promise<ServerResponse>;
+   paint(address: PixelAddress, color: Color): Promise<ServerResponse>;
+}
+
+//----------------------------------------------------------------------------------------
+export class DefaultApiClient implements ApiClient {
    host: string;
 
+   //-------------------------------------------------------------------------------------
    constructor(host: string) {
       this.host = host;
    }
 
-   async getBlock(address: string) {
+   //-------------------------------------------------------------------------------------
+   async getBlock(address: BlockAddress) {
       return await fetchWithRetry(this.host + "/api/block/" + address, {
          method: "GET"
       });
    }
 
-   async putBlock(address: string, data: Uint8Array) {
-      return await tfetch("server" + "/api/block/" + address, {
-         method: "PUT",
-         body: data
-      });
-   }
-
-   async getBlockList() {
-      return await tfetch("server" + "/api/blocklist", {
-         method: "GET"
+   //-------------------------------------------------------------------------------------
+   async paint(address: PixelAddress, color: Color) {
+      return await fetchWithRetry(this.host + "/api/paint/" + address, {
+         method: "POST",
+         body: JSON.stringify({ color }),
       });
    }
 }

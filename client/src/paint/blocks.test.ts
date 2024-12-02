@@ -3,8 +3,10 @@
 // Distributed under the MIT license. See LICENSE.txt for details.
 // ///////////////////////////////////////////////////////////////////////////////////////
 import { Coord } from "./cmath2";
-import { buildCoordString } from "./blocks";
+import { Blocks, buildCoordString } from "./blocks";
 import { toBase64url } from "./base64";
+import { ApiClient } from "./apiclient";
+import { delayMillis } from "./common";
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Convert a string of hex digits into a base64url string.
@@ -20,8 +22,31 @@ function hex64(hex: string): string {
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
+function TestApiClient() {
+   const client: ApiClient = {
+      getBlock: jest.fn().mockImplementation(async (blockAddress: string) => {
+         await delayMillis(50);
+         return {
+            code: "BLOCK",
+            pixels: "",
+            lastUpdated: 0,
+         };
+      }),
+
+      paint: jest.fn().mockImplementation(async (pixelAddress: string, color: number) => {
+         return {
+            code: "PIXEL_SET",
+         };
+      }),
+   };
+
+   return client;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
 describe("Blocks", () => {
 
+   ///////////////////////////////////////////////////////////////////////////////////////
    test("buildCoordString", () => {
       {
          // 0.4 octal is 0.1 in binary
@@ -46,5 +71,35 @@ describe("Blocks", () => {
          expect(buildCoordString(coords, 5)).toBe(hex64("EE0000"));
          expect(buildCoordString(coords, 6)).toBe(hex64("EE0001"));
       }
+   });
+
+   ///////////////////////////////////////////////////////////////////////////////////////
+   test("Subscribing to events", async () => {
+      jest.useFakeTimers();
+      const api = TestApiClient();
+      const blocks = new Blocks(api);
+
+      const eventHandler = jest.fn();
+      blocks.subscribe(eventHandler);
+      
+      // When a new block is requested, the status is "pending".
+      expect(blocks.getBlock(new Coord("0"), new Coord("0"), 0)).toBe("pending");
+      expect(api.getBlock).toHaveBeenCalledTimes(1);
+      expect(blocks.getBlock(new Coord("0"), new Coord("0"), 0)).toBe("pending");
+      // Does not make additional calls within the same period.
+      expect(api.getBlock).toHaveBeenCalledTimes(1);
+
+      expect(eventHandler).toHaveBeenCalledTimes(0);
+
+      // After the delay, the block is fetched.
+      await jest.advanceTimersByTimeAsync(100);
+      expect(eventHandler).toHaveBeenCalledTimes(1);
+      expect(eventHandler).toHaveBeenCalledWith("block", expect.anything());
+   });
+
+   // todo: cache management - deleting old blocks
+
+   afterEach(() => {
+      jest.useRealTimers();
    });
 });

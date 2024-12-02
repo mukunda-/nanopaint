@@ -94,11 +94,13 @@ func (pc *paintController) GetBlock(c Ct) error {
 	var response struct {
 		baseResponse
 
-		Pixels string `json:"pixels"`
+		Pixels      string            `json:"pixels"`
+		LastUpdated block2.UnixMillis `json:"lastUpdated"`
 	}
 
 	response.Code = "BLOCK"
 	response.Pixels = encodePixels(block.Pixels[:])
+	response.LastUpdated = block.LastUpdated
 
 	return c.JSON(200, response)
 }

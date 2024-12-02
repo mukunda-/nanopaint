@@ -22,7 +22,7 @@ export class Coord {
    constructor(valueOrString: bigint|string, point?: number) {
       point = point || 0;
       if (typeof valueOrString == "string") {
-         const coords = parseCoords(valueOrString);
+         const coords = parseCoord(valueOrString);
          this.point = coords.point;
          this.value = coords.value;
       } else {
@@ -122,23 +122,23 @@ function getPrecision(): number {
 }
 
 //----------------------------------------------------------------------------------------
-function parseCoords(coords: string): Coord {
-   const sign = coords.startsWith("-");
-   coords = sign ? coords.substring(1) : coords;
-   let frac = coords.indexOf(".");
-   coords = coords.replace(".", "");
+function parseCoord(coord: string): Coord {
+   const sign = coord.startsWith("-");
+   coord = sign ? coord.substring(1) : coord;
+   let frac = coord.indexOf(".");
+   coord = coord.replace(".", "");
    if (frac == -1) {
       frac = 0;
    } else {
-      frac = (coords.length - frac) * 3;
+      frac = (coord.length - frac) * 3;
    }
 
-   coords = coords.padStart(coords.length + ((8 - coords.length % 8) % 8), "0");
+   coord = coord.padStart(coord.length + ((8 - coord.length % 8) % 8), "0");
    let value = BigInt(0);
 
-   for (let i = 0; i < coords.length; i += 8) {
-      const start = coords.length - 8 - i;
-      const chunk = parseInt(coords.substring(start, start + 8), 8);
+   for (let i = 0; i < coord.length; i += 8) {
+      const start = coord.length - 8 - i;
+      const chunk = parseInt(coord.substring(start, start + 8), 8);
       value += BigInt(chunk) << BigInt(i * 3);
    }
 
@@ -158,8 +158,8 @@ function truncate(value: Coord, maxPoint: number): Coord {
 
 //----------------------------------------------------------------------------------------
 function add(a: Coord|string, b: Coord|string) {
-   if (typeof a == "string") a = parseCoords(a);
-   if (typeof b == "string") b = parseCoords(b);
+   if (typeof a == "string") a = parseCoord(a);
+   if (typeof b == "string") b = parseCoord(b);
 
    const point = Math.max(a.point, b.point);
    let av = a.value, bv = b.value;
@@ -174,16 +174,16 @@ function add(a: Coord|string, b: Coord|string) {
 
 //----------------------------------------------------------------------------------------
 function sub(a: Coord|string, b: Coord|string): Coord {
-   if (typeof a == "string") a = parseCoords(a);
-   if (typeof b == "string") b = parseCoords(b);
+   if (typeof a == "string") a = parseCoord(a);
+   if (typeof b == "string") b = parseCoord(b);
 
    return truncate(add(a, negate(b)), MaxPrecision);
 }
 
 //----------------------------------------------------------------------------------------
 function mul(a: Coord|string, b: Coord|string): Coord {
-   if (typeof a == "string") a = parseCoords(a);
-   if (typeof b == "string") b = parseCoords(b);
+   if (typeof a == "string") a = parseCoord(a);
+   if (typeof b == "string") b = parseCoord(b);
 
    return truncate(new Coord(a.value * b.value, a.point + b.point), MaxPrecision);
 }
@@ -200,7 +200,7 @@ function mul(a: Coord|string, b: Coord|string): Coord {
 
 //----------------------------------------------------------------------------------------
 function negate(a: Coord|string): Coord {
-   if (typeof a == "string") a = parseCoords(a);
+   if (typeof a == "string") a = parseCoord(a);
    return new Coord(-a.value, a.point);
 }
 
@@ -210,7 +210,7 @@ export const Cmath = {
    sub,
    mul,
    negate,
-   parseCoords,
+   parseCoords: parseCoord,
    setPrecision,
    getPrecision,
 };

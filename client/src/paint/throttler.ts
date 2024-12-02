@@ -19,7 +19,7 @@ export class Throttler {
    //-------------------------------------------------------------------------------------
    // This is called when a request is attempted. It will return zero if the request is
    // allowed, or a number of ms that needs to be waited before the request can be made.
-   allow(): number {
+   check(): number {
       const now = Date.now();
       
       const backlogTimeLimit = now - this.period * (this.burst - 1);
