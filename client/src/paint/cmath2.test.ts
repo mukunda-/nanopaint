@@ -49,6 +49,8 @@ describe("cmath", () => {
       expect(Cmath.add("2.4", "2.4").toString()).toBe("5");
       expect(Cmath.add(".4", ".4").toString()).toBe("1");
       expect(Cmath.add("2.2", "2").toString()).toBe("4.2");
+      expect(Cmath.add("0.7", "0.7").toString()).toBe("1.6");
+      
       expect(Cmath.add("20400.33", "0.756532").toString()).toBe("20401.306532");
       expect(Cmath.add("13.57313", "-13.63643").toString()).toBe("-0.0433");
 
@@ -189,9 +191,11 @@ describe("cmath", () => {
       //
 
       // So here we are accumulating up to N zeroes and
-      // then it should truncate back to zero.
+      // then it should truncate back to zero once we exceed the limit.
+      // We're going right up against the limit
+      // by multiplying by 0.1 (octal) `precision/3` times. (3=octal digits)
       let number = "1";
-      for (let i = 0; i < Cmath.getPrecision(); i++) {
+      for (let i = 0; i < Cmath.getPrecision()/3; i++) {
          number = Cmath.mul(number, "0.1").toString();
          const numZeroes = (number.match(/0/g) || []).length;
          expect(numZeroes).toBe(i + 1);

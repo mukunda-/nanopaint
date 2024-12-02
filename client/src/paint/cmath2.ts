@@ -3,14 +3,19 @@
 // Distributed under the MIT license. See LICENSE.txt for details.
 // ///////////////////////////////////////////////////////////////////////////////////////
 
-// bigint utilities. Supposedly bigint can handle a million bits, so that is plenty
-// sufficient for our "infinite" canvas. All we need is about 300 bits.
+// Purpose: bigint arithmetic. Supposedly bigint can handle a million bits, so it is
+// plenty sufficient for our "infinite" canvas. All we need is about 300 bits (which would
+// be extremely generous).
 
-export let MaxPrecision = 128; // 384-bit
+export let MaxPrecision = 384;
 
 //----------------------------------------------------------------------------------------
 export class Coord {
+   // How many lower bits of the value are the fractional part. 0 = integer. This is
+   // clamped when max precision is exceeded.
    point: number;
+
+   // real = value / 2^point
    value: bigint;
 
    constructor(valueOrString: bigint|string, point?: number) {
@@ -34,12 +39,30 @@ export class Coord {
    }
 
    toString(): string {
-      const sign = this.value < 0;
       const point = this.point;
-      const value = (sign ? -this.value : this.value).toString(8).padStart(point, "0");
-      const leftSide = value.length - point;
+      const sign = this.value < 0;
+      const absval = sign ? -this.value : this.value;
+
+      // Integer part is easy.
+      const integer = absval >> BigInt(this.point);
+
+      // Fractional part is a little difficult. We want to convert to string but must
+      // preserve the upper order zeroes.
+      let frac = absval & ((BigInt(1) << BigInt(this.point)) - BigInt(1));
+
+      // So, set this bit, and then we need to align this bit on an octal boundary.
+      // 3 bits = shift by 0
+      // 4 bits = shift by 2
+      // 5 bits = shift by 1
+      // 6 bits = shift by 0
+      frac |= BigInt(1) << BigInt(this.point);
+      frac <<= BigInt(3 - (this.point % 3));
+      // Then we discard the first digit and any trailing zeroes (handled by cleanNumberString)
+
+      const intstr = integer.toString(8);
+      const fracstr = frac.toString(8).substring(1);
       
-      return (sign ? "-":"") + cleanNumberString(value.substring(0, leftSide) + "." + value.substring(leftSide));
+      return (sign ? "-":"") + cleanNumberString(intstr + "." + fracstr);
    }
 }
 
@@ -103,7 +126,7 @@ function parseCoords(coords: string): Coord {
    if (frac == -1) {
       frac = 0;
    } else {
-      frac = coords.length - frac;
+      frac = (coords.length - frac) * 3;
    }
 
    coords = coords.padStart(coords.length + ((8 - coords.length % 8) % 8), "0");
@@ -122,9 +145,9 @@ function parseCoords(coords: string): Coord {
 function truncate(value: Coord, maxPoint: number): Coord {
    let v = value.value, p = value.point;
    if (p > maxPoint) {
-      const discardDigits = p - maxPoint;
-      v >>= BigInt(8) * BigInt(discardDigits);
-      p -= discardDigits;
+      const discardBits = p - maxPoint;
+      v >>= BigInt(discardBits);
+      p -= discardBits;
    }
    return new Coord(v, p);
 }
@@ -137,9 +160,9 @@ function add(a: Coord|string, b: Coord|string) {
    const point = Math.max(a.point, b.point);
    let av = a.value, bv = b.value;
    if (a.point < point) {
-      av <<= BigInt(3) * BigInt(point - a.point);
+      av <<= BigInt(point - a.point);
    } else if (b.point < point) {
-      bv <<= BigInt(3) * BigInt(point - b.point);
+      bv <<= BigInt(point - b.point);
    }
 
    return truncate(new Coord(av + bv, point), MaxPrecision);

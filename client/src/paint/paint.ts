@@ -9,7 +9,7 @@ import { Coord } from "./cmath2";
 // The paint engine.
 class Paint {
    bufferElement: HTMLCanvasElement;
-   pan: Coord[];
+   pan = [new Coord("0.4"), new Coord("0.4")];
    zoom = 0.0;
    dirty: Record<string,boolean> = {};
 
@@ -17,7 +17,6 @@ class Paint {
       this.bufferElement = document.createElement("canvas");
       this.bufferElement.width = 1024;
       this.bufferElement.height = 1024;
-      this.pan = [new Coord("0.4"), new Coord("0.4")];
    }
 
    render() {
@@ -25,19 +24,19 @@ class Paint {
    }
 }
 
-function render(canvasId: string, coords: Coords, zoom: number) {
-   const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
-   const ctx = canvas.getContext("2d");
-   const width = canvas.width;
-   const height = canvas.height;
-   const scale = 1 << zoom;
+function render(canvasId: string, coords: Coord[], zoom: number) {
+   // const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
+   // const ctx = canvas.getContext("2d");
+   // const width = canvas.width;
+   // const height = canvas.height;
+   // const scale = 1 << zoom;
 
-   const [sign, value, point] = parseCoords(coords);
-   const str = (sign ? "-" : "") + value + "e" + point;
+   // const [sign, value, point] = parseCoords(coords);
+   // const str = (sign ? "-" : "") + value + "e" + point;
 
-   const num = new BigFloat(str);
-   const x = num.mul(new BigFloat(width)).div(new BigFloat(scale));
-   const y = num.mul(new BigFloat(height)).div(new BigFloat(scale));
+   // const num = new BigFloat(str);
+   // const x = num.mul(new BigFloat(width)).div(new BigFloat(scale));
+   // const y = num.mul(new BigFloat(height)).div(new BigFloat(scale));
 
-   ctx.fillRect(x.toNumber(), y.toNumber(), 1, 1);
+   // ctx.fillRect(x.toNumber(), y.toNumber(), 1, 1);
 }
