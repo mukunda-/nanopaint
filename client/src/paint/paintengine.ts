@@ -6,20 +6,17 @@
 // Purpose: painting/rendering engine.
 import { buildCoordString } from "./blocks";
 import { Coord } from "./cmath2";
+import PaintMath from "./paintmath";
 
 const DEFAULT_VIEW_WIDTH = 512;
 const DEFAULT_VIEW_HEIGHT = 512;
 
 type View = {
-   position: Coord[]; // The center of the viewport.
+   position: [Coord, Coord]; // The center of the viewport.
    zoom: number; // The zoom level.
    size: [number, number]; // The size of the screen.
 };
 
-type ElementLocation = {
-   coords: Coord[];
-   level: number;
-};
 
 function getElementAddress(location: ElementLocation): string {
    const addr = buildCoordString(location.coords, location.level);
@@ -37,6 +34,14 @@ class PaintElement {
       this.location = location;
       this.computedAddress = getElementAddress(location);
       this.image = new ImageData(64, 64);
+      // TEST fill the image with blue
+      const data = this.image.data;
+      for (let i = 0; i < data.length; i += 4) {
+         data[i] = 0;
+         data[i + 1] = 0;
+         data[i + 2] = 255;
+         data[i + 3] = 255;
+      }
       this.dirty = true;
    }
 
@@ -86,6 +91,11 @@ export class PaintEngine {
    }
 
    //-------------------------------------------------------------------------------------
+   getBuffer() {
+      return this.bufferElement;
+   }
+
+   //-------------------------------------------------------------------------------------
    private deleteOffLevelElements() {
       const zoomInt = Math.floor(this.view.zoom);
       const keysToDelete: string[] = [];
@@ -106,74 +116,26 @@ export class PaintEngine {
    // Calculate the viewport from the current position, assuming a screen size of 512
    // pixels (not sure if this would be adjustable later).
    private computeViewport() {
-      const halfViewWidth = new Coord(BigInt(this.view.size[0]));
-      const halfViewHeight = new Coord(BigInt(this.view.size[1]));
-      
-      // Compute the fractional scale (between powers of two), and then we'll shift those
-      // bits over to the real scale.
-      const zoomInt = Math.floor(this.view.zoom);
-      const zoomFrac = this.view.zoom - zoomInt;
-      const scale = 131072 - 2 ** (zoomFrac) * (1<<16);
-      const perPixel = new Coord(BigInt(scale), 16 + zoomInt - 9);
-      // Zoom 0 = 1/1 over 512 pixels
-      // Zoom 1 = 1/2 over 512 pixels
-      // Zoom 2 = 1/4 over 512 pixels
-      // etc...
-
-      return [
-         this.view.position[0].sub(perPixel.mul(halfViewWidth)),
-         this.view.position[1].sub(perPixel.mul(halfViewHeight)),
-         this.view.position[0].add(perPixel.mul(halfViewWidth)),
-         this.view.position[1].add(perPixel.mul(halfViewHeight)),
-      ];
-   }
-
-   //-------------------------------------------------------------------------------------
-   // Builds a list of element locations that are touched by the current viewport.
-   private getVisibleElementLocations() {
-      const [vLeft, vTop, vRight, vBottom] = this.computeViewport();
-      const zoomInt = Math.floor(this.view.zoom);
-
-      this.deleteOffLevelElements();
-      const ctx = this.bufferElement.getContext("2d");
-
-      const locations: ElementLocation[] = [];
-
-      // Align the topleft corner of the viewport with the grid we are zoomed on.
-      // Zoom 0 = truncate to 1/8 (64 pixel units over 512 pixel screen)
-      vLeft.truncate(zoomInt + 3);
-      vTop.truncate(zoomInt + 3);
-      const blockSize = new Coord(BigInt(1), (zoomInt + 3));
-
-      const zero = new Coord("0");
-      const one = new Coord("1");
-
-      // "100" is octal 64.
-      for (let xc = vLeft.clone(); xc.lt(vRight); xc.add(blockSize)) {
-         for (let yc = vTop.clone(); yc.lt(vBottom); yc.add(blockSize)) {
-
-            // All blocks are in 0-1 range. Ignore space outside the block region.
-            if (xc.lt(zero) || yc.lt(zero)) continue;
-            if (xc.ge(one) || yc.ge(one)) continue;
-
-            const location = {
-               coords: [xc, yc],
-               level: zoomInt,
-            };
-            locations.push(location);
-         }
-      }
-
-      return locations;
+      return PaintMath.computeViewport(this.view.position, this.view.zoom, this.view.size);
    }
 
    //-------------------------------------------------------------------------------------
    render() {
-      
-      // const elem = this.getElement(location);
-      // if (elem.clearDirty()) {
-      //    ctx?.putImageData(elem.image, 0, 0);
-      //    // redraw to screen. otherwise wait for an update event.
+      //const locations = this.getVisibleElementLocations();
+
+      // this.deleteOffLevelElements();
+      // const ctx = this.bufferElement.getContext("2d");
+
+      // // We should sort the locations so that ones closer to the center are requested
+      // // before others.
+      // //locations.sort((a, b) => {
+         
+      // for (const location of locations) {
+      //    const elem = this.getElement(location);
+      //    if (elem.clearDirty()) {
+      //       ctx?.putImageData(elem.image, 0, 0);
+      //       elem.dirty = false;
+      //    }
       // }
    }
 }

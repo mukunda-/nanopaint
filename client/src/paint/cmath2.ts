@@ -44,12 +44,12 @@ export class Coord {
    mul(b: Coord|string): Coord { return mul(this, b); }
    negate(): Coord { return negate(this); }
    truncate(bits: number): Coord { return truncate(this, bits); }
-   compare(b: Coord): number { return compare(this, b); }
-   lt(b: Coord): boolean { return this.compare(b) < 0; }
-   le(b: Coord): boolean { return this.compare(b) <= 0; }
-   eq(b: Coord): boolean { return this.compare(b) == 0; }
-   ge(b: Coord): boolean { return this.compare(b) >= 0; }
-   gt(b: Coord): boolean { return this.compare(b) > 0; }
+   compare(b: Coord|string): number { return compare(this, b); }
+   lt(b: Coord|string): boolean { return this.compare(b) < 0; }
+   le(b: Coord|string): boolean { return this.compare(b) <= 0; }
+   eq(b: Coord|string): boolean { return this.compare(b) == 0; }
+   ge(b: Coord|string): boolean { return this.compare(b) >= 0; }
+   gt(b: Coord|string): boolean { return this.compare(b) > 0; }
 
    //-------------------------------------------------------------------------------------
    toString(): string {

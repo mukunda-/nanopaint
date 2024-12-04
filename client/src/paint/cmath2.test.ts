@@ -294,7 +294,6 @@ describe("cmath", () => {
       expect(new Coord(BigInt(1), 5).gt(new Coord(BigInt(1), 3))).toBe(false);
       expect(new Coord(BigInt(1), 5).gt(new Coord(BigInt(1), 6))).toBe(true);
 
-
       for (let i = 0; i < 1000; i++) {
          // Random values that fit within Javascript number/float range.
          const int1 = randomInt(0, 1000000);
