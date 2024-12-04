@@ -11,6 +11,10 @@ describe("cmath", () => {
       return Math.floor(Math.random() * 1000000);
    };
 
+   const randomInt = (min: number, max: number) => {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+   };  
+
    // const testFractional = () => {
    //    return Math.floor(Math.random() * 1000000) / Math.pow(8, Math.floor(Math.random() * 8));
    // }
@@ -186,6 +190,7 @@ describe("cmath", () => {
       }
    });
 
+   ///////////////////////////////////////////////////////////////////////////////////////
    test("Truncation", () => {
       //
       // After operations, fractional digits that exceed the current precision will be
@@ -204,5 +209,117 @@ describe("cmath", () => {
       }
       number = Cmath.mul(number, "0.1").toString();
       expect(number).toBe("0");
+   });
+
+   ///////////////////////////////////////////////////////////////////////////////////////
+   test("Truncation clipping", () => {
+
+      // In addition to terminating precision, truncation is also useful for masking
+      // out lower order bits.
+
+      ////////////////////////////////////////////////////////////////////////////////////
+      // Passing a positive number to `bits` will mask out any fractional bits that exceed
+      // the number.
+      // Truncating at 3: 3 bits of fraction remain and the rest are masked.
+
+      expect(Cmath.truncate("7.7777", 0).toString()).toBe("7");
+      expect(Cmath.truncate("7.7777", 1).toString()).toBe("7.4");
+      expect(Cmath.truncate("7.7777", 2).toString()).toBe("7.6");
+      expect(Cmath.truncate("7.7777", 3).toString()).toBe("7.7");
+      expect(Cmath.truncate("7.7777", 4).toString()).toBe("7.74");
+      expect(Cmath.truncate("7.7777", 5).toString()).toBe("7.76");
+      expect(Cmath.truncate("7.7777", 6).toString()).toBe("7.77");
+
+      ////////////////////////////////////////////////////////////////////////////////////
+      // Passing a negative number to `bits` will discard the fraction part completely
+      // and mask the integer part. It indicates how many lower-order bits of the integer
+      // should be masked out.
+      // the integer should be masked out.
+      // Truncating at -3: lower 3 bits of integer are zeroed. Fraction is discarded.
+
+      expect(Cmath.truncate("77.7777", -1).toString()).toBe("76");
+      expect(Cmath.truncate("77.7777", -2).toString()).toBe("74");
+      expect(Cmath.truncate("77.7777", -3).toString()).toBe("70");
+      expect(Cmath.truncate("77.7777", -4).toString()).toBe("60");
+      expect(Cmath.truncate("77.7777", -5).toString()).toBe("40");
+      expect(Cmath.truncate("77.7777", -6).toString()).toBe("0");
+
+      // Random testing.
+      for (let i = 0; i < 1000; i++) {
+         // JS bit math is limited to 32 bits.
+         // We'll use 16 bits of fraction and 14 bits of integer.
+         const testInput = randomInt(0, 1<<30);
+         const bits = randomInt(-20, 10);
+         let result = testInput;
+
+         if (bits > 0) {
+            // Above zero, truncate fractional part.
+            const truncate = 16 - bits;
+            result >>= truncate;
+            result <<= truncate;
+         } else {
+            result >>= 16;
+            result >>= -bits;
+            result <<= -bits;
+            result <<= 16;
+         }
+
+         result /= 0x10000;
+
+         expect(Cmath.truncate((testInput / 0x10000).toString(8), bits).toString()).toBe(result.toString(8));
+
+         // Include a test for the Coord method.
+         expect(new Coord((testInput / 0x10000).toString(8)).truncate(bits).toString()).toBe(result.toString(8));
+      }
+   });
+
+   ///////////////////////////////////////////////////////////////////////////////////////
+   test("Comparison", () => {
+
+      expect(Cmath.compare("1", "1")).toBe(0);
+      expect(Cmath.compare("1", "2")).toBe(-1);
+      expect(Cmath.compare("2", "1")).toBe(1);
+      expect(Cmath.compare("1.11111", "1.11111")).toBe(0);
+      expect(Cmath.compare("1.11111", "2.11111")).toBe(-1);
+      expect(Cmath.compare("2.11111", "1.11111")).toBe(1);
+
+      expect(new Coord("1").lt(new Coord("1"))).toBe(false);
+      expect(new Coord("1").lt(new Coord("1.0000000000000001"))).toBe(true);
+      expect(new Coord("1").gt(new Coord("1"))).toBe(false);
+      expect(new Coord("1").gt(new Coord("0.777777777"))).toBe(true);
+      expect(new Coord("1").eq(new Coord("0.777777777"))).toBe(false);
+      expect(new Coord("1").eq(new Coord("1"))).toBe(true);
+      expect(new Coord("1").eq(new Coord("1.000"))).toBe(true);
+      expect(new Coord(BigInt(1), 4).eq(new Coord(BigInt(2), 5))).toBe(true);
+      expect(new Coord(BigInt(1), 5).gt(new Coord(BigInt(1), 3))).toBe(false);
+      expect(new Coord(BigInt(1), 5).gt(new Coord(BigInt(1), 6))).toBe(true);
+
+
+      for (let i = 0; i < 1000; i++) {
+         // Random values that fit within Javascript number/float range.
+         const int1 = randomInt(0, 1000000);
+         const frac1 = randomInt(0, 24);
+         const int2 = randomInt(0, 1000000);
+         const frac2 = randomInt(0, 24);
+
+         const c1 = new Coord(BigInt(int1), frac1);
+         const c2 = new Coord(BigInt(int2), frac2);
+         
+         const real1 = int1 / 2**frac1;
+         const real2 = int2 / 2**frac2;
+
+         expect(c1.lt(c2)).toBe(real1 < real2);
+         expect(c1.gt(c2)).toBe(real1 > real2);
+         expect(c1.eq(c2)).toBe(real1 == real2);
+         expect(c1.ge(c2)).toBe(real1 >= real2);
+         expect(c1.le(c2)).toBe(real1 <= real2);
+
+         expect(c2.lt(c1)).toBe(real2 < real1);
+         expect(c2.gt(c1)).toBe(real2 > real1);
+         expect(c2.eq(c1)).toBe(real2 == real1);
+         expect(c2.ge(c1)).toBe(real2 >= real1);
+         expect(c2.le(c1)).toBe(real2 <= real1);
+
+      }
    });
 });

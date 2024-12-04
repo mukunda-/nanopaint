@@ -32,14 +32,24 @@ export class Coord {
    }
 
    //-------------------------------------------------------------------------------------
-   add(b: Coord|string): Coord {
-      return add(this, b);
+   // Passing coord around makes a shared reference. This will make a copy.
+   clone(): Coord {
+      return new Coord(this.value, this.point);
    }
 
    //-------------------------------------------------------------------------------------
-   sub(b: Coord|string): Coord {
-      return sub(this, b);
-   }
+   // Wrappers for Cmath convenience.
+   add(b: Coord|string): Coord { return add(this, b); }
+   sub(b: Coord|string): Coord { return sub(this, b); }
+   mul(b: Coord|string): Coord { return mul(this, b); }
+   negate(): Coord { return negate(this); }
+   truncate(bits: number): Coord { return truncate(this, bits); }
+   compare(b: Coord): number { return compare(this, b); }
+   lt(b: Coord): boolean { return this.compare(b) < 0; }
+   le(b: Coord): boolean { return this.compare(b) <= 0; }
+   eq(b: Coord): boolean { return this.compare(b) == 0; }
+   ge(b: Coord): boolean { return this.compare(b) >= 0; }
+   gt(b: Coord): boolean { return this.compare(b) > 0; }
 
    //-------------------------------------------------------------------------------------
    toString(): string {
@@ -48,20 +58,33 @@ export class Coord {
       const absval = sign ? -this.value : this.value;
 
       // Integer part is easy.
-      const integer = absval >> BigInt(this.point);
+      const integer = absval >> BigInt(point);
 
       // Fractional part is a little difficult. We want to convert to string but must
-      // preserve the upper order zeroes.
-      let frac = absval & ((BigInt(1) << BigInt(this.point)) - BigInt(1));
+      // preserve the upper-order zeroes.
+      let frac = absval & ((BigInt(1) << BigInt(point)) - BigInt(1));
 
       // So, set this bit, and then we need to align this bit on an octal boundary.
       // 3 bits = shift by 0
       // 4 bits = shift by 2
       // 5 bits = shift by 1
       // 6 bits = shift by 0
-      frac |= BigInt(1) << BigInt(this.point);
-      frac <<= BigInt(3 - (this.point % 3));
+      frac |= BigInt(1) << BigInt(point);
+      frac <<= BigInt(3 - (point % 3));
       // Then we discard the first digit and any trailing zeroes (handled by cleanNumberString)
+
+      // Operation example:
+      // octal 77.1234 fraction = .1234 = bits 0.001 010 011 100 = 001010011100
+      // If that was converted directly to a number, it'd strip the leading zeroes and
+      // incorrectly report octal "668" (binary 1010011100)
+      // So we add a 1 at the end, convert that, and then discard the first digit.
+      //    001010011100
+      // | 1000000000000
+      // ---------------
+      // = 1001010011100
+      //    ^^^ first octal digit
+      //   ^ dummy bit to preserve the leading zeroes
+      // toString -> 11234 -> remove first digit -> 1234
 
       const intstr = integer.toString(8);
       const fracstr = frac.toString(8).substring(1);
@@ -146,13 +169,25 @@ function parseCoord(coord: string): Coord {
 }
 
 //----------------------------------------------------------------------------------------
-function truncate(value: Coord, maxPoint: number): Coord {
+function truncate(value: Coord|string, bits: number): Coord {
+   if (typeof value == "string") value = parseCoord(value);
+
    let v = value.value, p = value.point;
-   if (p > maxPoint) {
-      const discardBits = p - maxPoint;
+   if (bits >= 0) {
+      if (p > bits) {
+         const discardBits = p - bits;
+         v >>= BigInt(discardBits);
+         p -= discardBits;
+      }
+   } else {
+      const discardBits = p;
       v >>= BigInt(discardBits);
-      p -= discardBits;
+      p = 0;
+
+      v >>= BigInt(-bits);
+      v <<= BigInt(-bits);
    }
+
    return new Coord(v, p);
 }
 
@@ -188,6 +223,24 @@ function mul(a: Coord|string, b: Coord|string): Coord {
    return truncate(new Coord(a.value * b.value, a.point + b.point), MaxPrecision);
 }
 
+//----------------------------------------------------------------------------------------
+// Compares two coords and returns -1 for a < b, 0 for a = b, and 1 for a > b.
+function compare(a: Coord|string, b: Coord|string): number {
+   if (typeof a == "string") a = parseCoord(a);
+   if (typeof b == "string") b = parseCoord(b);
+   
+   const point = Math.max(a.point, b.point);
+   let av = a.value, bv = b.value;
+   if (a.point < point) {
+      av <<= BigInt(point - a.point);
+   } else if (b.point < point) {
+      bv <<= BigInt(point - b.point);
+   }
+
+   if (av < bv) return -1;
+   if (av > bv) return 1;
+   return 0;
+}
 
 // leaving division out of the implementation unless we need it.
 //----------------------------------------------------------------------------------------
@@ -210,7 +263,9 @@ export const Cmath = {
    sub,
    mul,
    negate,
-   parseCoords: parseCoord,
+   compare,
+   truncate,
+   parseCoord,
    setPrecision,
    getPrecision,
 };
