@@ -42,6 +42,7 @@ export class Coord {
    add(b: Coord|string): Coord { return add(this, b); }
    sub(b: Coord|string): Coord { return sub(this, b); }
    mul(b: Coord|string): Coord { return mul(this, b); }
+   div(b: Coord|string): Coord { return div(this, b); }
    negate(): Coord { return negate(this); }
    truncate(bits: number): Coord { return truncate(this, bits); }
    compare(b: Coord|string): number { return compare(this, b); }
@@ -90,6 +91,11 @@ export class Coord {
       const fracstr = frac.toString(8).substring(1);
       
       return (sign ? "-":"") + cleanNumberString(intstr + "." + fracstr);
+   }
+
+   //-------------------------------------------------------------------------------------
+   toNumber(): number {
+      return Number(this.value) / 2**this.point;
    }
 }
 
@@ -242,14 +248,17 @@ function compare(a: Coord|string, b: Coord|string): number {
    return 0;
 }
 
-// leaving division out of the implementation unless we need it.
 //----------------------------------------------------------------------------------------
-// function div(a: Coords|string, b: Coords|string): Coords {
-//    if (typeof a == "string") a = parseCoords(a);
-//    if (typeof b == "string") b = parseCoords(b);
+function div(a: Coord|string, b: Coord|string): Coord {
+   if (typeof a == "string") a = parseCoord(a);
+   if (typeof b == "string") b = parseCoord(b);
 
-//    return truncate(new Coords(a.value / b.value, a.point - b.point), MaxPrecision);
-// }
+   if (b.value == BigInt(0)) {
+      throw new Error("Division by zero");
+   }
+
+   return truncate(new Coord((a.value << BigInt(b.point)) / b.value, a.point), MaxPrecision);
+}
 
 //----------------------------------------------------------------------------------------
 function negate(a: Coord|string): Coord {
@@ -262,6 +271,7 @@ export const Cmath = {
    add,
    sub,
    mul,
+   div,
    negate,
    compare,
    truncate,

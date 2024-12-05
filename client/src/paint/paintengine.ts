@@ -6,34 +6,45 @@
 // Purpose: painting/rendering engine.
 import { buildCoordString } from "./blocks";
 import { Coord } from "./cmath2";
-import PaintMath from "./paintmath";
+import { PaintMath, ElementLocation } from "./paintmath";
 
-const DEFAULT_VIEW_WIDTH = 512;
+//----------------------------------------------------------------------------------------
+const DEFAULT_VIEW_WIDTH  = 512;
 const DEFAULT_VIEW_HEIGHT = 512;
 
+//----------------------------------------------------------------------------------------
 type View = {
-   position: [Coord, Coord]; // The center of the viewport.
-   zoom: number; // The zoom level.
-   size: [number, number]; // The size of the screen.
+   // The centerpoint of the viewport.
+   position: [Coord, Coord];
+
+   // scale = 1/2^zoom, 0 = 1.0 over 512 pixels, 1 = 0.5 over 512 pixels, etc.
+   zoom: number;
+
+   // The size of the screen in pixels.
+   size: [number, number];
 };
 
-
+//----------------------------------------------------------------------------------------
 function getElementAddress(location: ElementLocation): string {
-   const addr = buildCoordString(location.coords, location.level);
+   const addr = buildCoordString(location.coords, location.level + 3);
    if (!addr) throw new Error("Invalid location");
    return addr;
 }
 
+//----------------------------------------------------------------------------------------
+type ImageDataFactory = (width: number, height: number) => ImageData;
+
+//----------------------------------------------------------------------------------------
 class PaintElement {
    location: ElementLocation;
    computedAddress: string;
    image: ImageData;
    dirty: boolean;
 
-   constructor(location: ElementLocation) {
+   constructor(location: ElementLocation, factory: ImageDataFactory) {
       this.location = location;
       this.computedAddress = getElementAddress(location);
-      this.image = new ImageData(64, 64);
+      this.image = factory(64, 64);
       // TEST fill the image with blue
       const data = this.image.data;
       for (let i = 0; i < data.length; i += 4) {
@@ -50,20 +61,39 @@ class PaintElement {
       this.dirty = false;
       return d;
    }
+}
 
+//----------------------------------------------------------------------------------------
+export interface RenderBuffer {
+   getContext(): RenderBufferContext;
+}
+
+//----------------------------------------------------------------------------------------
+export interface RenderBufferContext {
+   putImageData(image: ImageData, x: number, y: number): void;
 }
 
 //----------------------------------------------------------------------------------------
 // The paint engine.
 export class PaintEngine {
-   bufferElement: HTMLCanvasElement;
-   view: View = {
+   private renderBuffer: RenderBuffer;
+   readonly view: View = {
       position: [new Coord("0.4"), new Coord("0.4")],
       zoom: 0.0,
       size: [DEFAULT_VIEW_WIDTH, DEFAULT_VIEW_HEIGHT],
    };
-   dirty: Record<string,boolean> = {};
-   elements: Record<string,PaintElement> = {};
+   private elements: Record<string,PaintElement> = {};
+   private imageDataFactory: ImageDataFactory;
+   private repaintAll = true;
+
+   //-------------------------------------------------------------------------------------
+   constructor(options: {
+      renderBuffer: RenderBuffer,
+      imageDataFactory?: ImageDataFactory,
+   }) {
+      this.renderBuffer = options.renderBuffer;
+      this.imageDataFactory = options.imageDataFactory || ((width, height) => new ImageData(width, height));
+   }
 
    //-------------------------------------------------------------------------------------
    private getElement(location: ElementLocation) {
@@ -72,7 +102,7 @@ export class PaintEngine {
       if (this.elements[addr]) {
          return this.elements[addr];
       } else {
-         const elem = new PaintElement(location);
+         const elem = new PaintElement(location, this.imageDataFactory);
          this.elements[addr] = elem;
          return elem;
       }
@@ -84,15 +114,8 @@ export class PaintEngine {
    }
 
    //-------------------------------------------------------------------------------------
-   constructor() {
-      this.bufferElement = document.createElement("canvas");
-      this.bufferElement.width = 1024;
-      this.bufferElement.height = 1024;
-   }
-
-   //-------------------------------------------------------------------------------------
    getBuffer() {
-      return this.bufferElement;
+      return this.renderBuffer;
    }
 
    //-------------------------------------------------------------------------------------
@@ -120,40 +143,70 @@ export class PaintEngine {
    }
 
    //-------------------------------------------------------------------------------------
-   render() {
-      //const locations = this.getVisibleElementLocations();
-
-      // this.deleteOffLevelElements();
-      // const ctx = this.bufferElement.getContext("2d");
-
-      // // We should sort the locations so that ones closer to the center are requested
-      // // before others.
-      // //locations.sort((a, b) => {
-         
-      // for (const location of locations) {
-      //    const elem = this.getElement(location);
-      //    if (elem.clearDirty()) {
-      //       ctx?.putImageData(elem.image, 0, 0);
-      //       elem.dirty = false;
-      //    }
-      // }
+   private getVisibleElementLocations() {
+      return PaintMath.getVisibleElementLocations(this.computeViewport(), this.view.zoom);
    }
-}
 
-//----------------------------------------------------------------------------------------
-function render(canvasId: string, coords: Coord[], zoom: number) {
-   // const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
-   // const ctx = canvas.getContext("2d");
-   // const width = canvas.width;
-   // const height = canvas.height;
-   // const scale = 1 << zoom;
+   //-------------------------------------------------------------------------------------
+   setView(position?: [Coord, Coord], zoom?: number, size?: [number, number]) {
+      if (position) this.view.position = position;
+      if (zoom !== undefined) this.view.zoom = zoom;
+      if (size) this.view.size = size;
+      this.repaintAll = true;
+   }
 
-   // const [sign, value, point] = parseCoords(coords);
-   // const str = (sign ? "-" : "") + value + "e" + point;
+   //-------------------------------------------------------------------------------------
+   render() {
+      const locations = this.getVisibleElementLocations();
 
-   // const num = new BigFloat(str);
-   // const x = num.mul(new BigFloat(width)).div(new BigFloat(scale));
-   // const y = num.mul(new BigFloat(height)).div(new BigFloat(scale));
+      this.deleteOffLevelElements();
+      const ctx = this.renderBuffer.getContext();
 
-   // ctx.fillRect(x.toNumber(), y.toNumber(), 1, 1);
+      // We should sort the locations so that ones closer to the center are requested
+      // before others.
+      //locations.sort((a, b) => {
+      const viewport = this.computeViewport();
+      const bufferTopLeft = [
+         viewport[0].truncate(this.view.zoom + 3),
+         viewport[1].truncate(this.view.zoom + 3),
+      ] as [Coord, Coord];
+         
+      for (const location of locations) {
+         const elem = this.getElement(location);
+         if (elem.clearDirty() || this.repaintAll) {
+            const bufferCoords = PaintMath.getScreenBufferLocation(location.coords, bufferTopLeft, this.view.zoom);
+            if (!bufferCoords) continue; // Out of range.
+            ctx?.putImageData(elem.image, bufferCoords[0] * 64, bufferCoords[1] * 64);
+            elem.dirty = false;
+         }
+      }
+
+      this.repaintAll = false;
+   }
+
+   setTool(tool: string) {
+      this.resetTool();
+      this.tool = tool;
+   }
+
+   //-------------------------------------------------------------------------------------
+   pointerDown(x: number, y: number) {
+      // todo
+      console.log("pointerDown", x, y);
+      if (this.tool == "look") {
+
+      }
+   }
+
+   //-------------------------------------------------------------------------------------
+   pointerMove(x: number, y: number) {
+      // todo
+      console.log("pointerMove", x, y);
+   }
+
+   //-------------------------------------------------------------------------------------
+   pointerUp(x: number, y: number) {
+      // todo
+      console.log("pointerUp", x, y);
+   }
 }

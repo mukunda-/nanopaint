@@ -7,8 +7,9 @@ import { Coord } from "./cmath2";
 type CoordPair = [Coord, Coord];
 type CoordRect = [Coord, Coord, Coord, Coord];
 
+//----------------------------------------------------------------------------------------
 export type ElementLocation = {
-   coords: Coord[];
+   coords: CoordPair;
    level: number;
 };
 
@@ -61,15 +62,15 @@ function getVisibleElementLocations(
    // We align the topleft corner of the viewport with the grid we are zoomed on.
    // Zoom 0 = truncate to 1/8 (64 pixel units over 512 pixel screen)
 
-   for (let xc = vLeft.truncate(zoomInt + 3); xc.lt(vRight); xc = xc.add(blockSize)) {
-      for (let yc = vTop.truncate(zoomInt + 3); yc.lt(vBottom); yc = yc.add(blockSize)) {
+   for (let yc = vTop.truncate(zoomInt + 3); yc.lt(vBottom); yc = yc.add(blockSize)) {
+      for (let xc = vLeft.truncate(zoomInt + 3); xc.lt(vRight); xc = xc.add(blockSize)) {
 
          // All blocks are in 0-1 range. Ignore space outside the block region.
          if (xc.lt(zero) || yc.lt(zero)) continue;
          if (xc.ge(one) || yc.ge(one)) continue;
 
          const location = {
-            coords: [xc, yc],
+            coords: [xc, yc] as CoordPair,
             level: zoomInt,
          };
          locations.push(location);
@@ -80,7 +81,28 @@ function getVisibleElementLocations(
 }
 
 //----------------------------------------------------------------------------------------
+function getScreenBufferLocation(
+   location: CoordPair,
+   screenTopLeft: CoordPair,
+   zoom: number,
+): ([number,number]|undefined) {
+   // Block buffers begin at a truncated topleft coordinate of the screen view.
+   const adjustedTopLeft = screenTopLeft.map(c => c.truncate(zoom + 3));
+   const blockSize = new Coord(BigInt(1), zoom + 3); // 1 / 2^(zoom+3)
+   const blockOffset = [
+      location[0].sub(adjustedTopLeft[0]),
+      location[1].sub(adjustedTopLeft[1]),
+   ];
+   const screenOffset = blockOffset.map(c => c.div(blockSize));
+
+   const limit = 1000;
+   if (screenOffset[0].lt("0") || screenOffset[0].ge(limit.toString(8))) return undefined;
+   return screenOffset.map(c => c.truncate(0).toNumber()) as [number,number];
+}
+
+//----------------------------------------------------------------------------------------
 export const PaintMath = {
    computeViewport,
    getVisibleElementLocations,
+   getScreenBufferLocation,
 };

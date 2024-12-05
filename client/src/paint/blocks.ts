@@ -2,7 +2,7 @@
 // Nanopaint (C) 2024 Mukunda Johnson (me@mukunda.com)
 // Distributed under the MIT license. See LICENSE.txt for details.
 // ///////////////////////////////////////////////////////////////////////////////////////
-import { ApiClient, ServerResponse } from "./apiclient";
+import { ApiClient } from "./apiclient";
 import { toBase64url } from "./base64";
 import { Coord } from "./cmath2";
 import { delayMillis } from "./common";
@@ -17,12 +17,12 @@ const THROTTLE_BURST = 10;
 // Convert the given 2D coordinates into an address string suitable for a server request.
 // The format the server uses is a base64 encoding of 4bit XY pairs followed by the flags
 // byte.
-export function buildCoordString(coords: Coord[], level: number): string|undefined {
+export function buildCoordString(coords: [Coord,Coord], bits: number): string|undefined {
    if (coords.length != 2) throw new Error("invalid coords");
    const b: bigint[] = [coords[0].value, coords[1].value];
-   const bitmod = (level - 1) & 3;
+   const bitmod = (bits - 1) & 3;
 
-   const resultBytes = new Uint8Array(((level+3)>>2) + 1);
+   const resultBytes = new Uint8Array(((bits+3)>>2) + 1);
 
    for (let i = 0; i < 2; i++) {
       // Catch out of range.
@@ -31,21 +31,21 @@ export function buildCoordString(coords: Coord[], level: number): string|undefin
       
       // We want to align the value with the desired level.
       // All coords in coord string are fractional, no integer part.
-      const shift = coords[i].point - level;
+      const shift = coords[i].point - bits;
       b[i] >>= BigInt(shift);
 
       // Apply padding, 0-3 bits.
       b[i] <<= BigInt(3-bitmod);
    }
 
-   for (let i = ((level+3) >> 2) - 1; i >= 0; i--) {
+   for (let i = ((bits+3) >> 2) - 1; i >= 0; i--) {
       const byte = Number(b[0] & BigInt(0xF)) | (Number(b[1] & BigInt(0xF)) << 4);
       resultBytes[i] = byte;
       b[0] >>= BigInt(4);
       b[1] >>= BigInt(4);
    }
 
-   resultBytes[((level+3)>>2)] = bitmod;
+   resultBytes[((bits+3)>>2)] = bitmod;
    
    return toBase64url(resultBytes);
 }

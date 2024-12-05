@@ -52,7 +52,7 @@ describe("Blocks", () => {
          // 0.4 octal is 0.1 in binary
          // nibbles will be 1000 = 0x80
          // 88 will be the hex bytes for the interleaved components.
-         const coords = [new Coord("0.4"), new Coord("0.4")];
+         const coords: [Coord, Coord] = [new Coord("0.4"), new Coord("0.4")];
          expect(buildCoordString(coords, 0)).toBe(hex64("03"));
          expect(buildCoordString(coords, 1)).toBe(hex64("8800"));
          expect(buildCoordString(coords, 2)).toBe(hex64("8801"));
@@ -62,7 +62,7 @@ describe("Blocks", () => {
       }
 
       {
-         const coords = [new Coord("0.7"), new Coord("0.7")];
+         const coords: [Coord, Coord] = [new Coord("0.7"), new Coord("0.7")];
          expect(buildCoordString(coords, 0)).toBe(hex64("03"));
          expect(buildCoordString(coords, 1)).toBe(hex64("8800"));
          expect(buildCoordString(coords, 2)).toBe(hex64("CC01"));

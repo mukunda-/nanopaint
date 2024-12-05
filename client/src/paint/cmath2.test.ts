@@ -321,4 +321,54 @@ describe("cmath", () => {
 
       }
    });
+
+   ///////////////////////////////////////////////////////////////////////////////////////
+   test("Division", () => {
+      // Division is performed by shifting a.value left by b.point, and then performing
+      // integer division against b.value. a.point remains the same.
+      
+      expect(Cmath.div("4", "2").toString()).toBe("2");
+      expect(Cmath.div("5", "2.0").toString()).toBe("2");
+      expect(Cmath.div("6", "2.00").toString()).toBe("3");
+      expect(Cmath.div("7", "2").toString()).toBe("3");
+      expect(Cmath.div("10", "2").toString()).toBe("4");
+      expect(Cmath.div("10", "0.4").toString()).toBe("20");
+      
+      try {
+         Cmath.div("7", "0");
+         fail("Division by zero should throw an exception");
+      } catch(e) {
+         // Pass
+      }
+
+      // Random integer division.
+      for (let i = 0; i < 1000; i++) {
+         const a = testInteger();
+         const b = testInteger();
+         if (b == 0) continue;
+         const op = a.toString(8) + " \\ " + b.toString(8) + " = ";
+
+         const c1 = new Coord(BigInt(a), 0);
+         const c2 = new Coord(BigInt(b), 0);
+
+         expect(op+Cmath.div(a.toString(8), b.toString(8)).toString()).toBe(op+(Math.floor(a / b)).toString(8));
+         expect(op+c1.div(c2).toString()).toBe(op+(Math.floor(a / b)).toString(8));
+      }
+   });
+
+   ///////////////////////////////////////////////////////////////////////////////////////
+   test("Conversion to number", () => {
+      // Small coords can be converted to a plain number.
+      // Converting larger coords results in undefined behavior.
+      expect(new Coord("2").toNumber()).toBe(2);
+      expect(new Coord("2.0").toNumber()).toBe(2);
+      expect(new Coord("2.4").toNumber()).toBe(0o24/0o10);
+      expect(new Coord(".4").toNumber()).toBe(0o4/0o10);
+      expect(new Coord("2.2").toNumber()).toBe(0o22/0o10);
+      expect(new Coord("0.7").toNumber()).toBe(0o7/0o10);
+      expect(new Coord("20400.33").toNumber()).toBe(0o2040033 / 0o100);
+      expect(new Coord("13.57313").toNumber()).toBe(0o1357313 / 0o100000);
+      expect(new Coord("-13.63643").toNumber()).toBe(-0o1363643/0o100000);
+
+   });
 });
