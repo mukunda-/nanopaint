@@ -16,7 +16,7 @@ export class Checkerblocks implements ApiClient {
       for (let y = 0; y < 64; y++) {
          for (let x = 0; x < 64; x++) {
             if (x < 32 && y < 32 || x >= 32 && y >= 32) {
-               pixels[(y * 64 + x) * 4] = 0xCFFF0000;
+               pixels[(y * 64 + x) * 4] = 0xCFED0000;
             } else {
                pixels[(y * 64 + x) * 4] = 0xC0000000;
             }

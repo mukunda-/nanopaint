@@ -89,29 +89,19 @@ type Request = {
 type BlockEventHandler = (event: string, args: any) => void;
 
 export interface BlockSource {
+   // Can throw error if the block fails to be retrieved (network failure etc).
    getBlock(address: string): Promise<Block>;
 }
 
-//----------------------------------------------------------------------------------------
-// The normal block source that uses the server API to look up block data. Other block
-// sources are for testing.
-// class ApiBlockSource implements BlockSource {
-//    api: ApiClient;
 
-//    constructor(api: ApiClient) {
-//       this.api = api;
-//    }
 
-//    async getBlock(address: string): Promise<Block> {
-      
-//    }
-// }
 
 //----------------------------------------------------------------------------------------
 export class Blocks {
    nextRid = 0;
    blocks: Record<string, Block> = {};
    requests: Record<string, Request> = {};
+   blockSource: BlockSource,
    api: ApiClient;
    running = false;
    throttler = new Throttler(THROTTLE_PERIOD, THROTTLE_BURST);
@@ -223,9 +213,12 @@ export class Blocks {
             try {
                const resp = await this.api.getBlock(address);
                if (resp.code == "BLOCK") {
+                  
                   this.blocks[address] = {
                      pixels: new Uint32Array(64*64),
                   };
+
+
                } else if (resp.code == "NOT_FOUND") {
                   // empty block.
                   this.blocks[address] = {

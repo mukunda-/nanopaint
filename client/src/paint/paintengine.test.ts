@@ -103,7 +103,9 @@ describe("PaintEngine", () => {
       await new Promise((resolve) => setImmediate(resolve));
 
       jest.clearAllMocks();
+      engine.setView({});
       engine.render();
+      
       
       expect(renderBuffer.getContext().putImageData).toHaveBeenCalledTimes(1);
       const lastCall = (renderBuffer.getContext().putImageData).mock.calls.pop();
@@ -111,9 +113,15 @@ describe("PaintEngine", () => {
       for (let y = 0; y < 64; y++) {
          for (let x = 0; x < 64; x++) {
             if (x < 32 || y < 32 || x >= 32 || y >= 32) {
-               expect(imageData.data[x+y*64]).toBe(0xCFFF0000);
+               expect(imageData.data[(x+y*64)]).toBe(255); // 0xFED
+               expect(imageData.data[(x+y*64)+1]).toBe(238);
+               expect(imageData.data[(x+y*64)+2]).toBe(221);
+               expect(imageData.data[(x+y*64)+3]).toBe(255);
             } else {
-               expect(imageData.data[x+y*64]).toBe(0xC0000000);
+               expect(imageData.data[(x+y*64)]).toBe(0); // 0x000
+               expect(imageData.data[(x+y*64)+1]).toBe(0);
+               expect(imageData.data[(x+y*64)+2]).toBe(0);
+               expect(imageData.data[(x+y*64)+3]).toBe(255);
             }
          }
       } 

@@ -6,7 +6,7 @@
 import { delayMillis } from "./common";
 
 // Purpose: Low-level API client for the Nanopaint server.
-// One additional responsibiltiy is handling rate limiting.
+// Includes rate limit backoff/retry responsibility.
 
 export type BlockAddress = string;
 export type PixelAddress = string;
