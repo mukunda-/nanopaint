@@ -223,6 +223,7 @@ describe("cmath", () => {
       // Truncating at 3: 3 bits of fraction remain and the rest are masked.
 
       expect(Cmath.truncate("7.7777", 0).toString()).toBe("7");
+      expect(Cmath.truncate("7.7777").toString()).toBe("7");
       expect(Cmath.truncate("7.7777", 1).toString()).toBe("7.4");
       expect(Cmath.truncate("7.7777", 2).toString()).toBe("7.6");
       expect(Cmath.truncate("7.7777", 3).toString()).toBe("7.7");
@@ -351,7 +352,7 @@ describe("cmath", () => {
          const c1 = new Coord(BigInt(a), 0);
          const c2 = new Coord(BigInt(b), 0);
 
-         expect(op+Cmath.div(a.toString(8), b.toString(8)).toString()).toBe(op+(Math.floor(a / b)).toString(8));
+         expect(op+Cmath.div(a, b).toString()).toBe(op+(Math.floor(a / b)).toString(8));
          expect(op+c1.div(c2).toString()).toBe(op+(Math.floor(a / b)).toString(8));
       }
    });
@@ -370,5 +371,73 @@ describe("cmath", () => {
       expect(new Coord("13.57313").toNumber()).toBe(0o1357313 / 0o100000);
       expect(new Coord("-13.63643").toNumber()).toBe(-0o1363643/0o100000);
 
+   });
+
+   ///////////////////////////////////////////////////////////////////////////////////////
+   test("Linear interpolation", () => {
+      expect(Cmath.lerp("0", "1", 0.5).toString()).toBe("0.4");
+      expect(Cmath.lerp("0", "1", 1).toString()).toBe("1");
+      expect(Cmath.lerp("0", "2", 1).toString()).toBe("2");
+      expect(Cmath.lerp("-1", "1", 0.5).toString()).toBe("0");
+      expect(Cmath.lerp("-1", "1", -1).toString()).toBe("-3");
+      expect(Cmath.lerp("-1", "1", 2).toString()).toBe("3");
+
+      for (let i = 0; i < 1000; i++) {
+         const a = testSignedFractional();
+         const b = testSignedFractional();
+         // We want test values that avoid rounding errors.
+         const delta = randomInt(-256 * 4, 256 * 4) / 256;
+
+         // In case it isn't clear, we're including an op string to make it easier to see
+         // why tests fail (showing function arguments).
+         const op = `lerp(${a.toString(8)}, ${b.toString(8)}, ${delta}) = `;
+         expect(op+Cmath.lerp(a, b, delta).toString()).toBe(op+(a + (b - a) * delta).toString(8));
+      }
+   });
+
+   ///////////////////////////////////////////////////////////////////////////////////////
+   test("makeCoord", () => {
+      expect(Cmath.add(1,2).toString()).toBe("3");
+      expect(Cmath.add(1.125,2.125).toString()).toBe("3.2");
+      expect(Cmath.mul("4.33",2).toString()).toBe("10.66");
+
+      expect(new Coord(1.5).toString()).toBe("1.4");
+      expect(new Coord(1.125).toString()).toBe("1.1");
+      expect(new Coord(4,2).toString()).toBe("1");
+      expect(new Coord(4.5,2).toString()).toBe("1.1");
+   });
+
+   ///////////////////////////////////////////////////////////////////////////////////////
+   test("Floor", () => {
+      expect(Cmath.truncate("0.1").toString()).toBe("0");
+      expect(Cmath.truncate("1.1").toString()).toBe("1");
+      expect(Cmath.truncate("1.1",1).toString()).toBe("1");
+      expect(Cmath.truncate("-1.1").toString()).toBe("-2");
+      expect(Cmath.truncate("-2.1",1).toString()).toBe("-2.4");
+      expect(Cmath.truncate("-2.1",2).toString()).toBe("-2.2");
+      expect(Cmath.truncate("-2.1",3).toString()).toBe("-2.1");
+      expect(Cmath.truncate("-2.1",4).toString()).toBe("-2.1");
+   });
+
+   ///////////////////////////////////////////////////////////////////////////////////////
+   test("Ceil", () => {
+      expect(Cmath.ceil("0.1").toString()).toBe("1");
+      expect(Cmath.ceil("0.1", 0).toString()).toBe("1");
+      expect(Cmath.ceil("0.1", 1).toString()).toBe("0.4");
+      expect(Cmath.ceil("0.1", 2).toString()).toBe("0.2");
+      expect(Cmath.ceil("0.7", 2).toString()).toBe("1");
+      expect(Cmath.ceil("0.1", 3).toString()).toBe("0.1");
+      expect(Cmath.ceil("0.1", 4).toString()).toBe("0.1");
+      expect(Cmath.ceil("0.4", 1).toString()).toBe("0.4");
+      expect(Cmath.ceil("0.1", -1).toString()).toBe("2");
+      expect(Cmath.ceil("0.0001", -2).toString()).toBe("4");
+      expect(Cmath.ceil("0.0000", -2).toString()).toBe("0");
+      expect(Cmath.ceil("-0.1").toString()).toBe("0");
+      expect(Cmath.ceil("-1.1").toString()).toBe("-1");
+      
+      expect(Cmath.ceil("-0.0001", -2).toString()).toBe("0");
+      expect(Cmath.ceil("-1.0001", -2).toString()).toBe("0");
+      expect(Cmath.ceil("-4.0001", -2).toString()).toBe("-4");
+      expect(Cmath.ceil("-0.0000", -2).toString()).toBe("0");
    });
 });

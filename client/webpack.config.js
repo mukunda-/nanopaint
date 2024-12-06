@@ -107,11 +107,11 @@ export default (env, argv) => {
                   return content.toString().replaceAll("{{buildtime}}", buildtime);
                }
             },
-            // Additional copies can be added here.
-            // {
-            //    from: './res/*',
-            //    to: '',
-            // },
+            //Additional copies can be added here.
+            {
+               from: './src/*.png',
+               to: '[name][ext]',
+            },
             // {
             //    from: './manifest.json',
             //    to: '',

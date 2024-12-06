@@ -2,36 +2,12 @@
 // Nanopaint (C) 2024 Mukunda Johnson (me@mukunda.com)
 // Distributed under the MIT license. See LICENSE.txt for details.
 // ///////////////////////////////////////////////////////////////////////////////////////
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import GitHubButton from 'react-github-btn';
 import { Toolbox } from './toolbox';
 import { Palette } from './palette';
-import { PaintEngine } from './paint/paintengine';
-import { Coord } from './paint/cmath2';
-
-interface MyRenderBuffer {
-   getCanvas: () => HTMLCanvasElement;
-}
-
-function createRenderBuffer() {
-   const buffer = document.createElement("canvas");
-   buffer.width = 1024;
-   buffer.height = 1024;
-
-   return {
-      buffer,
-      getContext: () => {
-         return buffer.getContext("2d")!;
-      },
-      getCanvas: () => buffer,
-   };
-}
-
-const engine = new PaintEngine({
-   renderBuffer: createRenderBuffer(),
-   imageDataFactory: (w, h) => new ImageData(w, h),
-});
+import { PaintCanvas } from './PaintCanvas';
 
 function Header() {
    return <header className="w-full flex items-center flex-col">
@@ -46,72 +22,30 @@ function Header() {
    </header>;
 }
 
-let renderingStarted = false;
-
-function renderFrame() {
-   if (!renderingStarted) return;
-   requestAnimationFrame(renderFrame);
-   
-   const canvas = document.getElementById("mainView") as HTMLCanvasElement;
-   engine.setView([new Coord("0.1"), new Coord("0.1")]);
-   engine.render();
-
-   const ctx = canvas.getContext("2d")!;
-   ctx.drawImage((engine.getBuffer() as unknown as MyRenderBuffer).getCanvas(), 0, 0);
-}
-
-function startRendering() {
-   if (renderingStarted) return;
-   renderingStarted = true;
-   requestAnimationFrame(renderFrame);
-}
-
-function stopRendering() {
-   renderingStarted = false;
-}
-
 function Main() {
    const [tool, setTool] = useState("look");
-   const canvasRef = React.createRef<HTMLCanvasElement>();
 
-   useEffect(() => {
-      startRendering();
-      return () => {
-         stopRendering();
-      };
-   }, []);
-
-   const onCanvasPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-      const x = e.nativeEvent.offsetX;
-      const y = e.nativeEvent.offsetY;
-      engine.pointerDown(x, y);
-      canvasRef.current!.setPointerCapture(e.nativeEvent.pointerId);
-   };
-   const onCanvasPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-      const x = e.nativeEvent.offsetX;
-      const y = e.nativeEvent.offsetY;
-      engine.pointerMove(x, y);
-   };
-   const onCanvasPointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
-      const x = e.nativeEvent.offsetX;
-      const y = e.nativeEvent.offsetY;
-      canvasRef.current!.releasePointerCapture(e.pointerId);
-      engine.pointerUp(x, y);
-   };
+   // const onCanvasPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+   //    const x = e.nativeEvent.offsetX;
+   //    const y = e.nativeEvent.offsetY;
+   //    engine.pointerDown(x, y);
+   //    canvasRef.current!.setPointerCapture(e.nativeEvent.pointerId);
+   // };
+   // const onCanvasPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+   //    const x = e.nativeEvent.offsetX;
+   //    const y = e.nativeEvent.offsetY;
+   //    engine.pointerMove(x, y);
+   // };
+   // const onCanvasPointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+   //    const x = e.nativeEvent.offsetX;
+   //    const y = e.nativeEvent.offsetY;
+   //    canvasRef.current!.releasePointerCapture(e.pointerId);
+   //    engine.pointerUp(x, y);
+   // };
 
    return <main className="mt-8 max-w-[500px] m-auto">
       <div className="flex justify-center w-full mb-5">
-         <canvas
-            id="mainView"
-            width="500"
-            height="500"
-            className="border-2 border-gray-200"
-            onPointerDown={onCanvasPointerDown}
-            onPointerMove={onCanvasPointerMove}
-            onPointerUp={onCanvasPointerUp}
-            ref={canvasRef}
-
-         />
+         <PaintCanvas width={500} height={500} />
       </div>
       <div className="flex justify-center w-full mb-5">
          <Toolbox selected={tool} onSelect={(tool: string) => {

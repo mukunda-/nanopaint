@@ -9,6 +9,8 @@
 
 export let MaxPrecision = 384;
 
+type CoordInput = Coord|string|number;
+
 //----------------------------------------------------------------------------------------
 export class Coord {
    // How many lower bits of the value are the fractional part. 0 = integer. This is
@@ -19,12 +21,21 @@ export class Coord {
    value: bigint;
 
    //-------------------------------------------------------------------------------------
-   constructor(valueOrString: bigint|string, point?: number) {
+   constructor(valueOrString: number|bigint|string, point?: number) {
       point = point || 0;
       if (typeof valueOrString == "string") {
          const coords = parseCoord(valueOrString);
          this.point = coords.point;
          this.value = coords.value;
+      } else if (typeof valueOrString == "number") {
+         const num = valueOrString;
+         this.point = point;
+         if (Math.floor(num) == num) {
+            this.value = BigInt(valueOrString);
+         } else {
+            this.value = BigInt(Math.floor(valueOrString * 2**24));
+            this.point += 24;
+         }
       } else {
          this.point = point;
          this.value = valueOrString;
@@ -39,18 +50,19 @@ export class Coord {
 
    //-------------------------------------------------------------------------------------
    // Wrappers for Cmath convenience.
-   add(b: Coord|string): Coord { return add(this, b); }
-   sub(b: Coord|string): Coord { return sub(this, b); }
-   mul(b: Coord|string): Coord { return mul(this, b); }
-   div(b: Coord|string): Coord { return div(this, b); }
+   add(b: CoordInput): Coord { return add(this, b); }
+   sub(b: CoordInput): Coord { return sub(this, b); }
+   mul(b: CoordInput): Coord { return mul(this, b); }
+   div(b: CoordInput): Coord { return div(this, b); }
    negate(): Coord { return negate(this); }
-   truncate(bits: number): Coord { return truncate(this, bits); }
-   compare(b: Coord|string): number { return compare(this, b); }
-   lt(b: Coord|string): boolean { return this.compare(b) < 0; }
-   le(b: Coord|string): boolean { return this.compare(b) <= 0; }
-   eq(b: Coord|string): boolean { return this.compare(b) == 0; }
-   ge(b: Coord|string): boolean { return this.compare(b) >= 0; }
-   gt(b: Coord|string): boolean { return this.compare(b) > 0; }
+   truncate(bits?: number): Coord { return truncate(this, bits); }
+   ceil(bits?: number): Coord { return ceil(this, bits); }
+   compare(b: CoordInput): number { return compare(this, b); }
+   lt(b: CoordInput): boolean { return this.compare(b) < 0; }
+   le(b: CoordInput): boolean { return this.compare(b) <= 0; }
+   eq(b: CoordInput): boolean { return this.compare(b) == 0; }
+   ge(b: CoordInput): boolean { return this.compare(b) >= 0; }
+   gt(b: CoordInput): boolean { return this.compare(b) > 0; }
 
    //-------------------------------------------------------------------------------------
    toString(): string {
@@ -151,6 +163,25 @@ function getPrecision(): number {
 }
 
 //----------------------------------------------------------------------------------------
+function makeCoord(coord: CoordInput): Coord {
+   if (coord instanceof Coord) return coord;
+   if (typeof coord == "string") {
+      return parseCoord(coord);
+   }
+   if (typeof coord == "number") {
+      if (Math.floor(coord) == coord) {
+         // Integer
+         return new Coord(BigInt(coord), 0);
+      } else {
+         // Include fraction.
+         const expanded = Math.floor(coord * 2**24);
+         return new Coord(BigInt(expanded), 24);
+      }
+   }
+   throw new Error("Invalid coord input");
+}
+
+//----------------------------------------------------------------------------------------
 function parseCoord(coord: string): Coord {
    const sign = coord.startsWith("-");
    coord = sign ? coord.substring(1) : coord;
@@ -175,8 +206,9 @@ function parseCoord(coord: string): Coord {
 }
 
 //----------------------------------------------------------------------------------------
-function truncate(value: Coord|string, bits: number): Coord {
-   if (typeof value == "string") value = parseCoord(value);
+function truncate(value: CoordInput, bits?: number): Coord {
+   value = makeCoord(value);
+   bits = bits ?? 0;
 
    let v = value.value, p = value.point;
    if (bits >= 0) {
@@ -198,9 +230,46 @@ function truncate(value: Coord|string, bits: number): Coord {
 }
 
 //----------------------------------------------------------------------------------------
-function add(a: Coord|string, b: Coord|string) {
-   if (typeof a == "string") a = parseCoord(a);
-   if (typeof b == "string") b = parseCoord(b);
+// Truncates with ceiling instead of floor.
+function ceil(value: CoordInput, bits?: number): Coord {
+   value = makeCoord(value);
+   bits = bits ?? 0;
+   
+   // e.g. 0b1.1110100 with 3 bits:
+   //          ^^^ preserved
+   //             ^^^^ if this is not zero, then add one to the preserved.
+
+   let v = value.value, p = value.point;
+   if (bits >= 0) {
+      if (p > bits) {
+         const discardBits = p - bits;
+         const mask = (BigInt(1) << BigInt(discardBits)) - BigInt(1);
+         if ((v & mask) != BigInt(0)) {
+            v += BigInt(1) << BigInt(discardBits);
+         }
+         v >>= BigInt(discardBits);
+         p -= discardBits;
+      }
+   } else {
+      const discardBits = p;
+      const mask = (BigInt(1) << BigInt(p + -bits)) - BigInt(1);
+      if ((v & mask) != BigInt(0)) {
+         v += BigInt(1) << BigInt(p + -bits);
+      }
+      v >>= BigInt(discardBits);
+      p = 0;
+
+      v >>= BigInt(-bits);
+      v <<= BigInt(-bits);
+   }
+
+   return new Coord(v, p);
+}
+
+//----------------------------------------------------------------------------------------
+function add(a: CoordInput, b: CoordInput) {
+   a = makeCoord(a);
+   b = makeCoord(b);
 
    const point = Math.max(a.point, b.point);
    let av = a.value, bv = b.value;
@@ -214,26 +283,26 @@ function add(a: Coord|string, b: Coord|string) {
 }
 
 //----------------------------------------------------------------------------------------
-function sub(a: Coord|string, b: Coord|string): Coord {
-   if (typeof a == "string") a = parseCoord(a);
-   if (typeof b == "string") b = parseCoord(b);
+function sub(a: CoordInput, b: CoordInput): Coord {
+   a = makeCoord(a);
+   b = makeCoord(b);
 
    return truncate(add(a, negate(b)), MaxPrecision);
 }
 
 //----------------------------------------------------------------------------------------
-function mul(a: Coord|string, b: Coord|string): Coord {
-   if (typeof a == "string") a = parseCoord(a);
-   if (typeof b == "string") b = parseCoord(b);
+function mul(a: CoordInput, b: CoordInput): Coord {
+   a = makeCoord(a);
+   b = makeCoord(b);
 
    return truncate(new Coord(a.value * b.value, a.point + b.point), MaxPrecision);
 }
 
 //----------------------------------------------------------------------------------------
 // Compares two coords and returns -1 for a < b, 0 for a = b, and 1 for a > b.
-function compare(a: Coord|string, b: Coord|string): number {
-   if (typeof a == "string") a = parseCoord(a);
-   if (typeof b == "string") b = parseCoord(b);
+function compare(a: CoordInput, b: CoordInput): number {
+   a = makeCoord(a);
+   b = makeCoord(b);
    
    const point = Math.max(a.point, b.point);
    let av = a.value, bv = b.value;
@@ -249,9 +318,9 @@ function compare(a: Coord|string, b: Coord|string): number {
 }
 
 //----------------------------------------------------------------------------------------
-function div(a: Coord|string, b: Coord|string): Coord {
-   if (typeof a == "string") a = parseCoord(a);
-   if (typeof b == "string") b = parseCoord(b);
+function div(a: CoordInput, b: CoordInput): Coord {
+   a = makeCoord(a);
+   b = makeCoord(b);
 
    if (b.value == BigInt(0)) {
       throw new Error("Division by zero");
@@ -261,9 +330,19 @@ function div(a: Coord|string, b: Coord|string): Coord {
 }
 
 //----------------------------------------------------------------------------------------
-function negate(a: Coord|string): Coord {
-   if (typeof a == "string") a = parseCoord(a);
+function negate(a: CoordInput): Coord {
+   a = makeCoord(a);
    return new Coord(-a.value, a.point);
+}
+
+//----------------------------------------------------------------------------------------
+function lerp(a: CoordInput, b: CoordInput, delta: number): Coord {
+   a = makeCoord(a);
+   b = makeCoord(b);
+
+   const difference = sub(b, a);
+   const deltaCoord = new Coord(BigInt(Math.floor(delta * 0x10000)), 16);
+   return truncate(add(a, mul(difference, deltaCoord)), MaxPrecision);
 }
 
 //----------------------------------------------------------------------------------------
@@ -275,6 +354,8 @@ export const Cmath = {
    negate,
    compare,
    truncate,
+   ceil,
+   lerp,
    parseCoord,
    setPrecision,
    getPrecision,

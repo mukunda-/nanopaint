@@ -6,23 +6,12 @@
 // Purpose: painting/rendering engine.
 import { buildCoordString } from "./blocks";
 import { Coord } from "./cmath2";
-import { PaintMath, ElementLocation } from "./paintmath";
+import { PaintMath, ElementLocation, CoordRect } from "./paintmath";
+import { View } from "./paintmath";
 
 //----------------------------------------------------------------------------------------
 const DEFAULT_VIEW_WIDTH  = 512;
 const DEFAULT_VIEW_HEIGHT = 512;
-
-//----------------------------------------------------------------------------------------
-type View = {
-   // The centerpoint of the viewport.
-   position: [Coord, Coord];
-
-   // scale = 1/2^zoom, 0 = 1.0 over 512 pixels, 1 = 0.5 over 512 pixels, etc.
-   zoom: number;
-
-   // The size of the screen in pixels.
-   size: [number, number];
-};
 
 //----------------------------------------------------------------------------------------
 function getElementAddress(location: ElementLocation): string {
@@ -70,6 +59,7 @@ export interface RenderBuffer {
 
 //----------------------------------------------------------------------------------------
 export interface RenderBufferContext {
+   clear(): void;
    putImageData(image: ImageData, x: number, y: number): void;
 }
 
@@ -78,10 +68,16 @@ export interface RenderBufferContext {
 export class PaintEngine {
    private renderBuffer: RenderBuffer;
    readonly view: View = {
-      position: [new Coord("0.4"), new Coord("0.4")],
+      position: [new Coord(0.5), new Coord(0.5)],
       zoom: 0.0,
       size: [DEFAULT_VIEW_WIDTH, DEFAULT_VIEW_HEIGHT],
    };
+   private viewport: CoordRect = [
+      new Coord(0), new Coord(0), new Coord(1), new Coord(1)
+   ];
+   private alignedViewport: CoordRect = [
+      new Coord(0), new Coord(0), new Coord(1), new Coord(1)
+   ];
    private elements: Record<string,PaintElement> = {};
    private imageDataFactory: ImageDataFactory;
    private repaintAll = true;
@@ -93,6 +89,7 @@ export class PaintEngine {
    }) {
       this.renderBuffer = options.renderBuffer;
       this.imageDataFactory = options.imageDataFactory || ((width, height) => new ImageData(width, height));
+      this.setView();
    }
 
    //-------------------------------------------------------------------------------------
@@ -119,6 +116,49 @@ export class PaintEngine {
    }
 
    //-------------------------------------------------------------------------------------
+   getBufferPixelSize(): [number, number] {
+      const pixelScale = PaintMath.computePixelScale(Math.floor(this.view.zoom));
+      return [
+         this.alignedViewport[2].sub(this.alignedViewport[0]).div(pixelScale).toNumber(),
+         this.alignedViewport[3].sub(this.alignedViewport[1]).div(pixelScale).toNumber(),
+      ];
+   }
+
+   //-------------------------------------------------------------------------------------
+   getBufferScreenPosition(): [number, number, number, number] {
+      //const zoomFrac = this.view.zoom - Math.floor(this.view.zoom);
+      // const scale = 2 ** zoomFrac;
+      // const bufferPixelSize = this.getBufferPixelSize();
+
+      const viewport = this.viewport;
+      const viewportWidth = viewport[2].sub(viewport[0]);
+      const viewportHeight = viewport[3].sub(viewport[1]);
+      const left = this.alignedViewport[0]
+         .sub(this.viewport[0])
+         .mul(this.view.size[0])
+         .div(viewportWidth)
+         .toNumber();
+      const top = this.alignedViewport[1]
+         .sub(this.viewport[1])
+         .mul(this.view.size[1])
+         .div(viewportHeight)
+         .toNumber();
+
+      const width = this.alignedViewport[2]
+         .sub(this.alignedViewport[0])
+         .mul(this.view.size[0])
+         .div(viewportWidth)
+         .toNumber();
+      const height = this.alignedViewport[3]
+         .sub(this.alignedViewport[1])
+         .mul(this.view.size[1])
+         .div(viewportHeight)
+         .toNumber();
+
+      return [left, top, width, height];
+   }
+
+   //-------------------------------------------------------------------------------------
    private deleteOffLevelElements() {
       const zoomInt = Math.floor(this.view.zoom);
       const keysToDelete: string[] = [];
@@ -138,21 +178,41 @@ export class PaintEngine {
    //-------------------------------------------------------------------------------------
    // Calculate the viewport from the current position, assuming a screen size of 512
    // pixels (not sure if this would be adjustable later).
-   private computeViewport() {
-      return PaintMath.computeViewport(this.view.position, this.view.zoom, this.view.size);
-   }
+   // computeViewport() {
+   //    return PaintMath.computeViewport(this.view.position, this.view.zoom, this.view.size);
+   // }
 
    //-------------------------------------------------------------------------------------
    private getVisibleElementLocations() {
-      return PaintMath.getVisibleElementLocations(this.computeViewport(), this.view.zoom);
+      return PaintMath.getVisibleElementLocations(this.viewport, this.view.zoom);
    }
 
    //-------------------------------------------------------------------------------------
    setView(position?: [Coord, Coord], zoom?: number, size?: [number, number]) {
+      
       if (position) this.view.position = position;
       if (zoom !== undefined) this.view.zoom = zoom;
       if (size) this.view.size = size;
+
+      this.viewport = PaintMath.computeViewport(this.view.position, this.view.zoom, this.view.size);
+      this.alignedViewport = PaintMath.alignRectToBlockGrid(this.viewport, this.view.zoom);
+      //console.log(this.alignedViewport.map(c => c.toString()).join(","));
       this.repaintAll = true;
+   }
+
+   //-------------------------------------------------------------------------------------
+   getViewport() {
+      return this.viewport;
+   }
+
+   //-------------------------------------------------------------------------------------
+   getAlignedViewport() {
+      return this.alignedViewport;
+   }
+
+   //-------------------------------------------------------------------------------------
+   getView() {
+      return this.view;
    }
 
    //-------------------------------------------------------------------------------------
@@ -165,48 +225,34 @@ export class PaintEngine {
       // We should sort the locations so that ones closer to the center are requested
       // before others.
       //locations.sort((a, b) => {
-      const viewport = this.computeViewport();
       const bufferTopLeft = [
-         viewport[0].truncate(this.view.zoom + 3),
-         viewport[1].truncate(this.view.zoom + 3),
+         this.alignedViewport[0], this.alignedViewport[1]
       ] as [Coord, Coord];
          
+      ctx?.clear();
+
+      // const paintedLocations = {};
+
       for (const location of locations) {
          const elem = this.getElement(location);
          if (elem.clearDirty() || this.repaintAll) {
-            const bufferCoords = PaintMath.getScreenBufferLocation(location.coords, bufferTopLeft, this.view.zoom);
-            if (!bufferCoords) continue; // Out of range.
-            ctx?.putImageData(elem.image, bufferCoords[0] * 64, bufferCoords[1] * 64);
+            // <Update element image>
             elem.dirty = false;
          }
+         const bufferCoords = PaintMath.getScreenBufferLocation(location.coords, bufferTopLeft, this.view.zoom);
+         if (!bufferCoords) continue; // Out of range.
+         ctx?.putImageData(elem.image, bufferCoords[0] * 64, bufferCoords[1] * 64);
+         
       }
+
+      // for (let y = 0; y < this.view.size[1] / 64 + 2; y++) {
+      //    for (let x = 0; x < this.view.size[0] / 64 + 2; x++) {
+      //       if (!paintedLocations[x + "," + y]) {
+      //          ctx?.clearRect(x * 64, y * 64, 64, 64);
+      //       }
+      //    }
+      // }
 
       this.repaintAll = false;
-   }
-
-   setTool(tool: string) {
-      this.resetTool();
-      this.tool = tool;
-   }
-
-   //-------------------------------------------------------------------------------------
-   pointerDown(x: number, y: number) {
-      // todo
-      console.log("pointerDown", x, y);
-      if (this.tool == "look") {
-
-      }
-   }
-
-   //-------------------------------------------------------------------------------------
-   pointerMove(x: number, y: number) {
-      // todo
-      console.log("pointerMove", x, y);
-   }
-
-   //-------------------------------------------------------------------------------------
-   pointerUp(x: number, y: number) {
-      // todo
-      console.log("pointerUp", x, y);
    }
 }

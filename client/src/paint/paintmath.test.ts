@@ -127,7 +127,13 @@ describe("PaintMath", () => {
          }
             
       }{
+         //////////////////////////////////////////////////////////////////
+         // If a tiny portion of a block is visible, it should be included.
          const locs = PaintMath.getVisibleElementLocations(rect("0.1,0.1,0.7000001,0.7000001"), 0);
+
+         // as opposed to the previous test, we can see another row and column, and 
+         // we check for less than or equal to 0.7 with the coordinates, including this
+         // new row/col.
          expect(locs.length).toBe(49); // 7x7 grid
          expectConstraints(locs, 0);
          for (const loc of locs) {
@@ -140,10 +146,44 @@ describe("PaintMath", () => {
       }
       
       {
+         //////////////////////////////////////////////////////////////////
          // A viewport bigger than the valid block range will be clamped.
          const locs = PaintMath.getVisibleElementLocations(rect("-5,-5,5,5"), 1);
+         // [-5,5] range will cover a lot more than the whole grid. At zoom 1, we have
+         // 16x16 blocks.
          expect(locs.length).toBe(256); // 16x16 grid
          expectConstraints(locs, 1);
       }
+   });
+
+   ///////////////////////////////////////////////////////////////////////////////////////
+   test("Align rect to block grid", () => {
+
+      ///////////////////////////////////////////////////////////////////////////////
+      // Aligning a rect is moving the corners to the nearest block boundary.
+      // The top and left corners are truncated, the bottom and right are rounded up.
+      expect(
+         PaintMath.alignRectToBlockGrid(
+            rect("0.3,0.3,0.5,0.5"), 0
+         ).map(c => c.toString()).join(",")
+      ).toBe("0.3,0.3,0.5,0.5");
+      
+      expect(
+         PaintMath.alignRectToBlockGrid(
+            rect("0.37777,0.377777,0.41111,0.4"), 1
+         ).map(c => c.toString()).join(",")
+      ).toBe("0.34,0.34,0.44,0.4");
+
+      expect(
+         PaintMath.alignRectToBlockGrid(
+            rect("0.36666,0.366,0.555,0.555"), 2
+         ).map(c => c.toString()).join(",")
+      ).toBe("0.36,0.36,0.56,0.56");
+
+      expect(
+         PaintMath.alignRectToBlockGrid(
+            rect("0.11,0.21,0.66,0.44"), 0
+         ).map(c => c.toString()).join(",")
+      ).toBe("0.1,0.2,0.7,0.5");
    });
 });

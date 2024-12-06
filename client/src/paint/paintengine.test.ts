@@ -4,18 +4,11 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 
 import { Coord } from "./cmath2";
-import { PaintEngine, RenderBuffer, RenderBufferContext } from "./paintengine";
+import { PaintEngine } from "./paintengine";
+import { TestRenderBuffer } from "./renderbuffer.test";
 
 //////////////////////////////////////////////////////////////////////////////////////////
-class TestRenderBuffer implements RenderBuffer {
-   context: RenderBufferContext = {
-      putImageData: jest.fn()
-   };
 
-   getContext() {
-      return this.context;
-   }
-}
 
 function TestImageDataFactory(w: number, h: number): ImageData {
    return {
