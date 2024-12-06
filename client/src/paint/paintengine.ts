@@ -4,7 +4,8 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 
 // Purpose: painting/rendering engine.
-import { buildCoordString } from "./blocks";
+import { DefaultApiClient } from "./apiclient";
+import { Blocks, buildCoordString } from "./blocks";
 import { Coord } from "./cmath2";
 import { PaintMath, ElementLocation, CoordRect } from "./paintmath";
 import { View } from "./paintmath";
@@ -81,6 +82,7 @@ export class PaintEngine {
    private elements: Record<string,PaintElement> = {};
    private imageDataFactory: ImageDataFactory;
    private repaintAll = true;
+   private blocks: Blocks;
 
    //-------------------------------------------------------------------------------------
    constructor(options: {
@@ -89,7 +91,8 @@ export class PaintEngine {
    }) {
       this.renderBuffer = options.renderBuffer;
       this.imageDataFactory = options.imageDataFactory || ((width, height) => new ImageData(width, height));
-      this.setView();
+      this.setView({});
+      this.blocks = new Blocks(new DefaultApiClient("localhost"));
    }
 
    //-------------------------------------------------------------------------------------
@@ -188,11 +191,15 @@ export class PaintEngine {
    }
 
    //-------------------------------------------------------------------------------------
-   setView(position?: [Coord, Coord], zoom?: number, size?: [number, number]) {
-      
-      if (position) this.view.position = position;
-      if (zoom !== undefined) this.view.zoom = zoom;
-      if (size) this.view.size = size;
+   setView(opts: {
+      position?: [Coord, Coord],
+      zoom?: number,
+      size?: [number, number]
+   }) {
+      opts = opts || {};
+      if (opts.position) this.view.position = opts.position;
+      if (opts.zoom !== undefined) this.view.zoom = opts.zoom;
+      if (opts.size) this.view.size = opts.size;
 
       this.viewport = PaintMath.computeViewport(this.view.position, this.view.zoom, this.view.size);
       this.alignedViewport = PaintMath.alignRectToBlockGrid(this.viewport, this.view.zoom);
@@ -213,6 +220,27 @@ export class PaintEngine {
    //-------------------------------------------------------------------------------------
    getView() {
       return this.view;
+   }
+
+   //-------------------------------------------------------------------------------------
+   renderElement(element: PaintElement) {
+      const block = this.blocks.getBlock(element.location.coords[0], element.location.coords[1], element.location.level);
+      if (!block) return;
+      if (block == "pending") return;
+
+      // <Update element image>
+      const data = element.image.data;
+      for (let i = 0; i < 64 * 64; i++) {
+         const r = (block.pixels[i] >> 16) & 0xF;
+         const g = (block.pixels[i] >> 20) & 0xF;
+         const b = (block.pixels[i] >> 24) & 0xF;
+         const a = (block.pixels[i] >> 31);
+
+         data[i * 4] = Math.round(r * 255/15);
+         data[i * 4 + 1] = Math.round(g * 255/15);
+         data[i * 4 + 2] = Math.round(b * 255/15);
+         data[i * 4 + 3] = a ? 255 : 0;
+      }
    }
 
    //-------------------------------------------------------------------------------------
@@ -237,7 +265,7 @@ export class PaintEngine {
          const elem = this.getElement(location);
          if (elem.clearDirty() || this.repaintAll) {
             // <Update element image>
-            elem.dirty = false;
+            this.renderElement(elem);
          }
          const bufferCoords = PaintMath.getScreenBufferLocation(location.coords, bufferTopLeft, this.view.zoom);
          if (!bufferCoords) continue; // Out of range.

@@ -185,5 +185,15 @@ describe("PaintMath", () => {
             rect("0.11,0.21,0.66,0.44"), 0
          ).map(c => c.toString()).join(",")
       ).toBe("0.1,0.2,0.7,0.5");
+
+      ///////////////////
+      // Zoom is floored.
+      for (let zoom = 0.1; zoom < 0.9; zoom += 0.1) {
+         expect(
+            PaintMath.alignRectToBlockGrid(
+               rect("0.11,0.21,0.66,0.44"), zoom
+            ).map(c => c.toString()).join(",")
+         ).toBe("0.1,0.2,0.7,0.5");
+      }
    });
 });

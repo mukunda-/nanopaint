@@ -41,7 +41,18 @@ export function PaintCanvas(props: {
       const sourceSize = engineRef.current.getBufferPixelSize();
       const bufferPos = engineRef.current.getBufferScreenPosition();
       ctx.drawImage(canvasBuffer, 0, 0, sourceSize[0], sourceSize[1], bufferPos[0], bufferPos[1], bufferPos[2], bufferPos[3]);
+
+      const location = engineRef.current.getView()
+                        .position
+                        .map(x => x.toString())
+                        .join(", ")
+                       + ", " + engineRef.current.getView().zoom.toFixed(3);
+      const statusSize = ctx.measureText(location);
+      ctx.fillRect(0, 512-12, statusSize.width + 4, 12);
+      ctx.fillStyle = "black";
+      ctx.font = "11px sans-serif";
       
+      ctx.fillText(location, 0, 510);
    };
 
    //-------------------------------------------------------------------------------------

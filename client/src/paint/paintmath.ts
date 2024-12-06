@@ -50,6 +50,8 @@ function alignRectToBlockGrid(
    rect: CoordRect,
    zoom: number,
 ): CoordRect {
+   zoom = Math.floor(zoom);
+   
    const trunc = zoom + 3;
    const aligned = [
       rect[0].truncate(trunc),

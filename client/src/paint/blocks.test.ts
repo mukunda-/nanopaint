@@ -3,10 +3,11 @@
 // Distributed under the MIT license. See LICENSE.txt for details.
 // ///////////////////////////////////////////////////////////////////////////////////////
 import { Coord } from "./cmath2";
-import { Blocks, buildCoordString } from "./blocks";
+import { Blocks, buildCoordString, parseCoordString } from "./blocks";
 import { toBase64url } from "./base64";
 import { ApiClient } from "./apiclient";
 import { delayMillis } from "./common";
+import { CoordPair } from "./paintmath";
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Convert a string of hex digits into a base64url string.
@@ -70,6 +71,25 @@ describe("Blocks", () => {
          expect(buildCoordString(coords, 4)).toBe(hex64("EE03"));
          expect(buildCoordString(coords, 5)).toBe(hex64("EE0000"));
          expect(buildCoordString(coords, 6)).toBe(hex64("EE0001"));
+      }
+   });
+
+   ///////////////////////////////////////////////////////////////////////////////////////
+   test("parseCoordString", () => {
+      for (let i = 0; i < 100; i++) {
+         const x = Math.random() * 0x1000000;
+         const y = Math.random() * 0x1000000;
+         const bits = Math.floor(Math.random() * 16 + 24);
+         const coords: CoordPair = [
+            new Coord(x, bits).truncate(bits),
+            new Coord(y, bits).truncate(bits),
+         ];
+         
+         const address = buildCoordString(coords, bits)!;
+         const [parsed, bits2] = parseCoordString(address);
+         expect(parsed[0].toString()).toBe(coords[0].toString());
+         expect(parsed[1].toString()).toBe(coords[1].toString());
+         expect(bits2).toBe(bits);
       }
    });
 

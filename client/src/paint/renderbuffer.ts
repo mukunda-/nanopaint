@@ -33,6 +33,7 @@ export class CanvasRenderBuffer implements RenderBuffer {
       };
    }
 
+   //-------------------------------------------------------------------------------------
    getCanvas() {
       return this.buffer;
    }

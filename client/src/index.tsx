@@ -45,7 +45,7 @@ function Main() {
 
    return <main className="mt-8 max-w-[500px] m-auto">
       <div className="flex justify-center w-full mb-5">
-         <PaintCanvas width={500} height={500} />
+         <PaintCanvas width={512} height={512} />
       </div>
       <div className="flex justify-center w-full mb-5">
          <Toolbox selected={tool} onSelect={(tool: string) => {
