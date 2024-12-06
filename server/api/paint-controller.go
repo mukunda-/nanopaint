@@ -55,7 +55,7 @@ func encodePixels(pixels []block2.Pixel) string {
 		byteArray[s+3] = byte(pixel >> 24)
 	}
 
-	return base64.StdEncoding.EncodeToString(byteArray)
+	return base64.URLEncoding.EncodeToString(byteArray)
 }
 
 // ---------------------------------------------------------------------------------------

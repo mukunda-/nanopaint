@@ -13,8 +13,13 @@ export type PixelAddress = string;
 export type Color = number;
 
 export type ServerResponse = {
+   // All responses must contain a code.
    code: string;
+   // Message is optional and for the developer.
    message?: string;
+
+   // Additional payload data.
+   [key: string]: any;
 };
 
 //----------------------------------------------------------------------------------------

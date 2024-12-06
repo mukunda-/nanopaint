@@ -4,20 +4,7 @@
  * @jest-environment jsdom
  */
 
-import { RenderBuffer, RenderBufferContext } from "./paintengine";
 import { CanvasRenderBuffer } from "./renderbuffer";
-
-//////////////////////////////////////////////////////////////////////////////////////////
-export class TestRenderBuffer implements RenderBuffer {
-   context: RenderBufferContext = {
-      putImageData: jest.fn(),
-      clear: jest.fn(),
-   };
-
-   getContext() {
-      return this.context;
-   }
-}
 
 //////////////////////////////////////////////////////////////////////////////////////////
 describe("RenderBuffer", () => {

@@ -6,7 +6,6 @@ import { ApiClient } from "./apiclient";
 import { fromBase64url, toBase64url } from "./base64";
 import { Coord } from "./cmath2";
 import { delayMillis } from "./common";
-import { Mandelblock } from "./mandelblock";
 import { CoordPair } from "./paintmath";
 import { Throttler } from "./throttler";
 
@@ -82,6 +81,7 @@ type GetBlockResult = Block | "pending" | undefined;
 type Request = {
    rid: number;
    address: string;
+   priority: number;
    fulfill: () => Promise<void>;
    status: "pending" | "fetching";
 };
@@ -95,45 +95,33 @@ export interface BlockSource {
 //----------------------------------------------------------------------------------------
 // The normal block source that uses the server API to look up block data. Other block
 // sources are for testing.
-class ApiBlockSource implements BlockSource {
-   api: ApiClient;
+// class ApiBlockSource implements BlockSource {
+//    api: ApiClient;
 
-   constructor(api: ApiClient) {
-      this.api = api;
-   }
+//    constructor(api: ApiClient) {
+//       this.api = api;
+//    }
 
-   async getBlock(address: string): Promise<Block> {
-      const resp = await this.api.getBlock(address);
-      if (resp.code == "BLOCK") {
-         return {
-            pixels: new Uint32Array(64*64),
-         };
-      } else if (resp.code == "NOT_FOUND") {
-         // empty block.
-         return {
-            pixels: new Uint32Array(64*64),
-         };
-      } else {
-         throw new Error("block api failed: " + resp.code);
-      }
-   }
-}
+//    async getBlock(address: string): Promise<Block> {
+      
+//    }
+// }
 
 //----------------------------------------------------------------------------------------
 export class Blocks {
    nextRid = 0;
    blocks: Record<string, Block> = {};
-   requests: Request[] = [];
+   requests: Record<string, Request> = {};
    api: ApiClient;
    running = false;
    throttler = new Throttler(THROTTLE_PERIOD, THROTTLE_BURST);
    callbacks: BlockEventHandler[] = [];
-   blockSource: BlockSource;
+   //blockSource: BlockSource;
 
    //-------------------------------------------------------------------------------------
    constructor(api: ApiClient) {
       this.api = api;
-      this.blockSource = new Mandelblock();//ApiBlockSource(api);
+      //this.blockSource = new Mandelblock();//ApiBlockSource(api);
    }
 
    //-------------------------------------------------------------------------------------
@@ -168,65 +156,85 @@ export class Blocks {
          console.error("Failed fulfilling a request.", "address = ", req.address, e);
       }
 
-      // Remove request.
-      const idx = this.requests.indexOf(req);
-      if (idx != -1) {
-         this.requests.splice(idx, 1);
-      }
+      // Remove completed request. If it failed for whatever reason, then the engine can retry.
+      delete this.requests[req.address];
    }
 
    //-------------------------------------------------------------------------------------
    private async runRequests() {
-      if (this.requests.length == 0) return;
       if (this.running) return;
       this.running = true;
 
-      try {
-         for (const req of this.requests) {
-            if (req.status == "pending") {
+      // I don't really like constant conditions, but I prefer this over tail recursion.
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+         try {
+            const bestRequest = Object.values(this.requests)
+               .reduce((best: Request|undefined, req: Request) => {
+                  if (req.status === "pending" 
+                                             && (!best || req.priority < best.priority)) {
+                     return req;
+                  }
+                  return best;
+               }, undefined);
+
+            if (bestRequest) {
                const waitTime = this.throttler.check();
                if (waitTime == 0) {
-                  req.status = "fetching";
-                  void this.fulfillRequest(req);
+                  bestRequest.status = "fetching";
+                  void this.fulfillRequest(bestRequest);
                } else {
+                  // Throttled: wait and retry later.
                   await delayMillis(waitTime);
-                  break;
                }
+            } else {
+               // No more requests.
+               break;
             }
+         } catch (e) {
+            console.error("Unexpected error in block requests:", e);
+         } finally {
+            this.running = false;
          }
-      } catch (e) {
-         console.error("Unexpected error in block requests:", e);
-      } finally {
-         this.running = false;
       }
-
-      this.runRequests(); // Try again for additional requests.
    }
 
    //-------------------------------------------------------------------------------------
-   private pushRequest(address: string, fulfill: () => Promise<void>) {
-      this.requests.push({
+   private pushRequest(address: string, priority: number, fulfill: () => Promise<void>) {
+      this.requests[address] = {
          rid: this.nextRid++,
          address,
+         priority,
          status: "pending",
          fulfill,
-      });
+      };
 
-      this.runRequests();
+      void this.runRequests();
    }
 
    //-------------------------------------------------------------------------------------
    private async requestBlock(address: string) {
-      for (const r of this.requests) {
-         if (r.address == address) return; // Already queued.
-      }
+      if (this.requests[address]) return; // Already queued.
 
       this.pushRequest(
          address,
+         1,
          async () => {
             try {
-               const block = await this.blockSource.getBlock(address);
-               this.blocks[address] = block;
+               const resp = await this.api.getBlock(address);
+               if (resp.code == "BLOCK") {
+                  this.blocks[address] = {
+                     pixels: new Uint32Array(64*64),
+                  };
+               } else if (resp.code == "NOT_FOUND") {
+                  // empty block.
+                  this.blocks[address] = {
+                     pixels: new Uint32Array(64*64),
+                  };
+               } else {
+                  throw new Error("block api failed: " + resp.code);
+               }
+               
                this.notify("block", { address });
             } catch (err) {
                console.error("Failed to fetch block:", err);
@@ -241,7 +249,15 @@ export class Blocks {
       // Remove any pending requests. This is useful when the camera pans and we don't
       // want off-screen requests being fulfilled anymore. Any in-progress requests will
       // still complete. Newer requests will be made from the updated position.
-      this.requests.filter(req => req.status == "pending");
+      const keysToRemove = Object.values(this.requests)
+         .filter(req => req.status == "pending")
+         .map(req => req.address);
+
+      for (const key of keysToRemove) {
+         delete this.requests[key];
+      }
+
+      //this.requests = this.requests.filter(req => req.status == "pending");
    }
    
    //-------------------------------------------------------------------------------------

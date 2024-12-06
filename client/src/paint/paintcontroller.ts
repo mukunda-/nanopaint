@@ -3,6 +3,8 @@
 // Distributed under the MIT license. See LICENSE.txt for details.
 // ///////////////////////////////////////////////////////////////////////////////////////
 
+// Purpose: input handling for the paint engine.
+
 import { Cmath, Coord } from "./cmath2";
 import { PaintEngine } from "./paintengine";
 import * as Hammer from "hammerjs";

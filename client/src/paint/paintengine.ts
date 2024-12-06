@@ -4,9 +4,10 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 
 // Purpose: painting/rendering engine.
-import { DefaultApiClient } from "./apiclient";
+import { ApiClient, DefaultApiClient } from "./apiclient";
 import { Blocks, buildCoordString } from "./blocks";
 import { Coord } from "./cmath2";
+import { Mandelblock } from "./mandelblock";
 import { PaintMath, ElementLocation, CoordRect } from "./paintmath";
 import { View } from "./paintmath";
 
@@ -88,11 +89,13 @@ export class PaintEngine {
    constructor(options: {
       renderBuffer: RenderBuffer,
       imageDataFactory?: ImageDataFactory,
+      apiClient?: ApiClient
    }) {
       this.renderBuffer = options.renderBuffer;
       this.imageDataFactory = options.imageDataFactory || ((width, height) => new ImageData(width, height));
       this.setView({});
-      this.blocks = new Blocks(new DefaultApiClient("localhost"));
+      //this.blocks = new Blocks(new DefaultApiClient("localhost"));
+      this.blocks = new Blocks(options.apiClient || new DefaultApiClient(""));
    }
 
    //-------------------------------------------------------------------------------------

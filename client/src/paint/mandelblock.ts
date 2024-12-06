@@ -6,6 +6,8 @@
 // Purpose: For prototyping, a read-only block source that provides the Mandelbrot set.
 // Also very fun :)
 
+import { ApiClient, ServerResponse } from "./apiclient";
+import { toBase64url } from "./base64";
 import { Block, BlockSource, parseCoordString } from "./blocks";
 import { Coord } from "./cmath2";
 
@@ -29,9 +31,9 @@ function mandel(x: Coord, y: Coord): number {
 }
 
 //----------------------------------------------------------------------------------------
-export class Mandelblock implements BlockSource {
+export class Mandelblock implements ApiClient {
 
-   async getBlock(address: string): Promise<Block> {
+   async getBlock(address: string): Promise<ServerResponse> {
       // const [coords, bits] = parseCoordString(address);
       // const blockX = coords[0];
       // const blockY = coords[1];
@@ -51,8 +53,18 @@ export class Mandelblock implements BlockSource {
          }
       }
 
+      const pixelBytes = new Uint8Array(pixels.buffer);
+      const pixelData = toBase64url(pixelBytes);
+
       return {
-         pixels
+         code: "BLOCK",
+         pixels: pixelData,
+      };
+   }
+
+   async paint(address: string, color: number): Promise<ServerResponse> {
+      return {
+         code: "DISABLED"
       };
    }
 }
