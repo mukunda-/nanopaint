@@ -6,8 +6,7 @@
 // Purpose: For prototyping, a read-only block source that provides the Mandelbrot set.
 // Also very fun :)
 
-import { toBase64url } from "./base64";
-import { Block, BlockSource } from "./blocks";
+import { Block, BlockSource } from "./blockqueue";
 import { Coord } from "./cmath2";
 
 function mandel(x: Coord, y: Coord): number {
@@ -30,15 +29,15 @@ function mandel(x: Coord, y: Coord): number {
 }
 
 //----------------------------------------------------------------------------------------
-export class Mandelblock implements BlockSource {
+export class Mandelblocks implements BlockSource {
 
    async getBlock(address: string): Promise<Block> {
       // const [coords, bits] = parseCoordString(address);
       // const blockX = coords[0];
       // const blockY = coords[1];
       // const pixelScale = new Coord(1, bits);
-
-      const pixels = new Uint32Array(64 * 64 * 4);
+      console.log("making block for address", address);
+      const pixels = new Uint32Array(64 * 64);
 
       for (let y = 0; y < 64; y++) {
          for (let x = 0; x < 64; x++) {
@@ -47,8 +46,8 @@ export class Mandelblock implements BlockSource {
             // const color = mandel(px, py);
             const color = Math.floor(Math.random() * 0xFFF);
             
-            const index = (y * 64 + x) * 4;
-            pixels[index] = 0xC00000000 | ((color & 0xFFF) << 16);
+            const index = (y * 64 + x);
+            pixels[index] = 0xC0000000 | ((color & 0xFFF) << 16);
          }
       }
 

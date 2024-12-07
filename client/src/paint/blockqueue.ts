@@ -2,7 +2,6 @@
 // Nanopaint (C) 2024 Mukunda Johnson (me@mukunda.com)
 // Distributed under the MIT license. See LICENSE.txt for details.
 // ///////////////////////////////////////////////////////////////////////////////////////
-import { ApiClient } from "./apiclient";
 import { fromBase64url, toBase64url } from "./base64";
 import { Coord } from "./cmath2";
 import { delayMillis } from "./common";
@@ -76,8 +75,10 @@ export type Block = {
    pixels: Uint32Array;
 };
 
+//----------------------------------------------------------------------------------------
 type GetBlockResult = Block | "pending" | undefined;
 
+//----------------------------------------------------------------------------------------
 type Request = {
    rid: number;
    address: string;
@@ -86,32 +87,44 @@ type Request = {
    status: "pending" | "fetching";
 };
 
+//----------------------------------------------------------------------------------------
+// Consumers can subscribe to block events, such as when a block is loaded. Useful for
+// updating pixel regions when new data is available.
 type BlockEventHandler = (event: string, args: any) => void;
 
+//----------------------------------------------------------------------------------------
 export interface BlockSource {
    // Can throw error if the block fails to be retrieved (network failure etc).
    getBlock(address: string): Promise<Block>;
 }
 
-
-
+//----------------------------------------------------------------------------------------
+export type BlockEventArgs = {
+   address: string;
+};
 
 //----------------------------------------------------------------------------------------
-export class Blocks {
+export interface BlockQueue {
+   subscribe(handler: BlockEventHandler): void;
+   unsubscribe(handler: BlockEventHandler): void;
+   cancelPendingRequests(): void;
+   getBlock(x: Coord, y: Coord, level: number): GetBlockResult;
+}
+
+//----------------------------------------------------------------------------------------
+export class ThrottlingBlockQueue {
    nextRid = 0;
    blocks: Record<string, Block> = {};
    requests: Record<string, Request> = {};
-   blockSource: BlockSource,
-   api: ApiClient;
+   blockSource: BlockSource;
    running = false;
    throttler = new Throttler(THROTTLE_PERIOD, THROTTLE_BURST);
    callbacks: BlockEventHandler[] = [];
    //blockSource: BlockSource;
 
    //-------------------------------------------------------------------------------------
-   constructor(api: ApiClient) {
-      this.api = api;
-      //this.blockSource = new Mandelblock();//ApiBlockSource(api);
+   constructor(blockSource: BlockSource) {
+      this.blockSource = blockSource;
    }
 
    //-------------------------------------------------------------------------------------
@@ -211,23 +224,8 @@ export class Blocks {
          1,
          async () => {
             try {
-               const resp = await this.api.getBlock(address);
-               if (resp.code == "BLOCK") {
-                  
-                  this.blocks[address] = {
-                     pixels: new Uint32Array(64*64),
-                  };
-
-
-               } else if (resp.code == "NOT_FOUND") {
-                  // empty block.
-                  this.blocks[address] = {
-                     pixels: new Uint32Array(64*64),
-                  };
-               } else {
-                  throw new Error("block api failed: " + resp.code);
-               }
-               
+               const block = await this.blockSource.getBlock(address);
+               this.blocks[address] = block;
                this.notify("block", { address });
             } catch (err) {
                console.error("Failed to fetch block:", err);

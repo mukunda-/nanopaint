@@ -4,8 +4,9 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 
 import { ApiClient } from "./apiclient";
-import { Block, BlockSource } from "./blocks";
+import { Block, BlockSource } from "./blockqueue";
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function decodePixels(data: string, output: Uint32Array) {
    // todo.
 }  

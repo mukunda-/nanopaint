@@ -3,11 +3,12 @@
 // Distributed under the MIT license. See LICENSE.txt for details.
 // ///////////////////////////////////////////////////////////////////////////////////////
 import { Coord } from "./cmath2";
-import { Blocks, buildCoordString, parseCoordString } from "./blocks";
+import { ThrottlingBlockQueue, buildCoordString, parseCoordString } from "./blockqueue";
 import { toBase64url } from "./base64";
 import { ApiClient } from "./apiclient";
 import { delayMillis } from "./common";
 import { CoordPair } from "./paintmath";
+import { ApiBlockSource } from "./apiblocksource";
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Convert a string of hex digits into a base64url string.
@@ -97,7 +98,8 @@ describe("Blocks", () => {
    test("Subscribing to events", async () => {
       jest.useFakeTimers();
       const api = TestApiClient();
-      const blocks = new Blocks(api);
+      const source = new ApiBlockSource(api);
+      const blocks = new ThrottlingBlockQueue(source);
 
       const eventHandler = jest.fn();
       blocks.subscribe(eventHandler);
@@ -117,6 +119,36 @@ describe("Blocks", () => {
       expect(eventHandler).toHaveBeenCalledWith("block", expect.anything());
    });
 
+   ///////////////////////////////////////////////////////////////////////////////////////
+   test("Address translation", () => {
+      const source = {
+         getBlock: jest.fn().mockImplementation(async (address: string) => {
+            return {
+               pixels: new Uint32Array(64*64),
+            };
+         }),
+      };
+
+      const blocks = new ThrottlingBlockQueue(source);
+      blocks.getBlock(new Coord(0), new Coord(0), 3);
+      expect(source.getBlock).toHaveBeenLastCalledWith(hex64("0002"));
+
+      blocks.getBlock(new Coord(0.125), new Coord(0), 3);
+      expect(source.getBlock).toHaveBeenLastCalledWith(hex64("0202"));
+
+      blocks.getBlock(new Coord(0.5), new Coord(0.125), 3);
+      expect(source.getBlock).toHaveBeenLastCalledWith(hex64("2802"));
+
+      blocks.getBlock(new Coord(0.625), new Coord(0.750), 3);
+      expect(source.getBlock).toHaveBeenLastCalledWith(hex64("ca02"));
+
+      blocks.getBlock(new Coord(0.625), new Coord(0.750), 4);
+      expect(source.getBlock).toHaveBeenLastCalledWith(hex64("ca03"));
+
+      blocks.getBlock(new Coord(0.625), new Coord(0.750), 5);
+      expect(source.getBlock).toHaveBeenLastCalledWith(hex64("ca0000"));
+
+   });
    // todo: cache management - deleting old blocks
 
    afterEach(() => {

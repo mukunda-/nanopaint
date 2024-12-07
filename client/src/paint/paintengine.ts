@@ -4,11 +4,11 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 
 // Purpose: painting/rendering engine.
-import { ApiClient, DefaultApiClient } from "./apiclient";
-import { Blocks, buildCoordString } from "./blocks";
+import { ApiBlockSource } from "./apiblocksource";
+import { DefaultApiClient } from "./apiclient";
+import { BlockEventArgs, BlockQueue, ThrottlingBlockQueue, BlockSource, buildCoordString, parseCoordString } from "./blockqueue";
 import { Coord } from "./cmath2";
-import { Mandelblock } from "./mandelblock";
-import { PaintMath, ElementLocation, CoordRect } from "./paintmath";
+import { PaintMath, ElementLocation, CoordRect, CoordPair } from "./paintmath";
 import { View } from "./paintmath";
 
 //----------------------------------------------------------------------------------------
@@ -83,19 +83,63 @@ export class PaintEngine {
    private elements: Record<string,PaintElement> = {};
    private imageDataFactory: ImageDataFactory;
    private repaintAll = true;
-   private blocks: Blocks;
+   private blocks: BlockQueue;
 
    //-------------------------------------------------------------------------------------
    constructor(options: {
       renderBuffer: RenderBuffer,
       imageDataFactory?: ImageDataFactory,
-      apiClient?: ApiClient
+      blockSource?: BlockSource,
+      blocks?: BlockQueue,
    }) {
       this.renderBuffer = options.renderBuffer;
       this.imageDataFactory = options.imageDataFactory || ((width, height) => new ImageData(width, height));
-      this.setView({});
       //this.blocks = new Blocks(new DefaultApiClient("localhost"));
-      this.blocks = new Blocks(options.apiClient || new DefaultApiClient(""));
+      this.blocks = options.blocks || new ThrottlingBlockQueue(
+         options.blockSource
+         || new ApiBlockSource(new DefaultApiClient("")));
+         
+      this.blocks.subscribe((event, args) => {
+         this.onBlockEvent(event, args);
+      });
+      this.setView({});
+   }
+
+   //-------------------------------------------------------------------------------------
+   private markElementsDirtyAtLocation(location: CoordPair, bits: number) {
+      // The size of the location depends on the bits.
+      // 0 bits = entire canvas (1)
+      // 1 bits = half of canvas (0.5)
+      // 2 bits = quarter of canvas (0.25)
+      // 3 bits = 1/8 of canvas (0.125) <- this is the minimum zoom on the client.
+      const size = new Coord(1, bits);
+      const bottomright = [
+         location[0].add(size),
+         location[1].add(size),
+      ];
+
+      for (const key of Object.keys(this.elements)) {
+         const elem = this.elements[key];
+         if (elem.location.coords[0].ge(location[0])
+             && elem.location.coords[1].ge(location[1])
+             && elem.location.coords[0].lt(bottomright[0])
+             && elem.location.coords[1].lt(bottomright[1])
+         ) {
+            elem.dirty = true;
+         }
+      }
+   }
+
+   //-------------------------------------------------------------------------------------
+   private onBlockEvent(event: string, args: any) {
+      if (event == "block") {
+         // When a block is loaded, dirty any elements that it covers. This may be a
+         // higher level block that dirties several underlying elements. Our elements only
+         // exist at the bottommost level we are looking at.
+         args = args as BlockEventArgs;
+         const [location, bits] = parseCoordString(args.address);
+         this.markElementsDirtyAtLocation(location, bits);
+      }
    }
 
    //-------------------------------------------------------------------------------------
@@ -208,6 +252,7 @@ export class PaintEngine {
       this.alignedViewport = PaintMath.alignRectToBlockGrid(this.viewport, this.view.zoom);
       //console.log(this.alignedViewport.map(c => c.toString()).join(","));
       this.repaintAll = true;
+      this.blocks.cancelPendingRequests();
    }
 
    //-------------------------------------------------------------------------------------
@@ -227,7 +272,7 @@ export class PaintEngine {
 
    //-------------------------------------------------------------------------------------
    renderElement(element: PaintElement) {
-      const block = this.blocks.getBlock(element.location.coords[0], element.location.coords[1], element.location.level);
+      const block = this.blocks.getBlock(element.location.coords[0], element.location.coords[1], element.location.level + 3);
       if (!block) return;
       if (block == "pending") return;
 

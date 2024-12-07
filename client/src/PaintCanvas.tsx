@@ -6,6 +6,8 @@ import React, { useEffect, useRef } from 'react';
 import { PaintEngine } from './paint/paintengine';
 import { PaintController } from './paint/paintcontroller';
 import { CanvasRenderBuffer } from './paint/renderbuffer';
+import { Checkerblocks } from './paint/checkerblocks';
+import { Mandelblocks } from './paint/mandelblocks';
 
 //----------------------------------------------------------------------------------------
 interface MyRenderBuffer {
@@ -64,6 +66,7 @@ export function PaintCanvas(props: {
       engineRef.current = new PaintEngine({
          renderBuffer: new CanvasRenderBuffer(props.width, props.height),
          imageDataFactory: (w, h) => new ImageData(w, h),
+         blockSource: new Mandelblocks(),
       });
       controllerRef.current = new PaintController(engineRef.current, canvasRef.current);
       

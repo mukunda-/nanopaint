@@ -7,7 +7,7 @@
 
 import { Cmath, Coord } from "./cmath2";
 import { PaintEngine } from "./paintengine";
-import * as Hammer from "hammerjs";
+//import * as Hammer from "hammerjs";
 import { PaintMath } from "./paintmath";
 
 export class PaintController {
