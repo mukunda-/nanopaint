@@ -7,3 +7,9 @@
 export async function delayMillis(ms: number) {
    return await new Promise(resolve => setTimeout(resolve, ms));
 }
+
+//----------------------------------------------------------------------------------------
+export async function yieldToEvents() {
+   return await new Promise(resolve => setTimeout(resolve, 1));
+}
+

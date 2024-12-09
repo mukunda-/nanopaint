@@ -30,6 +30,9 @@ export class CanvasRenderBuffer implements RenderBuffer {
          clear: () => {
             ctx?.clearRect(0, 0, this.buffer.width, this.buffer.height);
          },
+         getCanvasContext() {
+            return ctx;
+         },
       };
    }
 

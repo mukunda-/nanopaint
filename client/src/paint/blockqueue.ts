@@ -4,7 +4,7 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 import { fromBase64url, toBase64url } from "./base64";
 import { Coord } from "./cmath2";
-import { delayMillis } from "./common";
+import { delayMillis, yieldToEvents } from "./common";
 import { CoordPair } from "./paintmath";
 import { Throttler } from "./throttler";
 
@@ -108,7 +108,7 @@ export interface BlockQueue {
    subscribe(handler: BlockEventHandler): void;
    unsubscribe(handler: BlockEventHandler): void;
    cancelPendingRequests(): void;
-   getBlock(x: Coord, y: Coord, level: number): GetBlockResult;
+   getBlock(x: Coord, y: Coord, level: number, priority?: number): GetBlockResult;
 }
 
 //----------------------------------------------------------------------------------------
@@ -174,7 +174,7 @@ export class ThrottlingBlockQueue {
          try {
             const bestRequest = Object.values(this.requests)
                .reduce((best: Request|undefined, req: Request) => {
-                  if (req.status === "pending" 
+                  if (req.status == "pending" 
                                              && (!best || req.priority < best.priority)) {
                      return req;
                   }
@@ -186,6 +186,7 @@ export class ThrottlingBlockQueue {
                if (waitTime == 0) {
                   bestRequest.status = "fetching";
                   void this.fulfillRequest(bestRequest);
+                  await yieldToEvents();
                } else {
                   // Throttled: wait and retry later.
                   await delayMillis(waitTime);
@@ -216,16 +217,20 @@ export class ThrottlingBlockQueue {
    }
 
    //-------------------------------------------------------------------------------------
-   private async requestBlock(address: string) {
+   private async requestBlock(address: string, priority: number) {
       if (this.requests[address]) return; // Already queued.
 
       this.pushRequest(
          address,
-         1,
+         priority,
          async () => {
             try {
                const block = await this.blockSource.getBlock(address);
+               // for (let i = 0; i < block.pixels.length; i++) {
+               //    block.pixels[i] = 0x80000000 | (((priority ) << 16) & 0xFFF0000);
+               // }
                this.blocks[address] = block;
+               // console.log("filfulled", priority);
                this.notify("block", { address });
             } catch (err) {
                console.error("Failed to fetch block:", err);
@@ -252,7 +257,7 @@ export class ThrottlingBlockQueue {
    }
    
    //-------------------------------------------------------------------------------------
-   getBlock(x: Coord, y: Coord, level: number): GetBlockResult {
+   getBlock(x: Coord, y: Coord, level: number, priority?: number): GetBlockResult {
       if (x.value < 0 || y.value < 0) return undefined;
       if (
          x.value >> BigInt(x.point) >= BigInt(1) ||
@@ -270,7 +275,7 @@ export class ThrottlingBlockQueue {
       }
 
       // Make a request.
-      this.requestBlock(address);
+      this.requestBlock(address, priority || 0);
       return "pending";
    }
 }

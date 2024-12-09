@@ -30,10 +30,10 @@ describe("PaintEngine", () => {
       // Any blocks that are not within the viewport range are not rendered.
       // Only blocks that are partially or fully within the viewport area are rendered.
       const renderBuffer = new TestRenderBuffer();
-
       const engine = new PaintEngine({
          renderBuffer,
          imageDataFactory: TestImageDataFactory,
+         blockSource: new Checkerblocks(),
       });
       jest.clearAllMocks();
       engine.render();
@@ -86,13 +86,15 @@ describe("PaintEngine", () => {
       const renderBuffer = new TestRenderBuffer();
 
       const requested: Record<string, number> = {};
+      const priorities: Record<string, number> = {};
       const blocks = {
          subscribe: jest.fn(),
          unsubscribe: jest.fn(),
          cancelPendingRequests: jest.fn(),
-         getBlock: jest.fn().mockImplementation((x: Coord, y: Coord, level: number) => {
+         getBlock: jest.fn().mockImplementation((x: Coord, y: Coord, level: number, priority?: number) => {
             const index = `${x},${y},${level}`;
             requested[index] = (requested[index] || 0) + 1;
+            priorities[index] = priority || 0;
          }),
       };
 
@@ -119,6 +121,19 @@ describe("PaintEngine", () => {
       // Each pass should never make duplicate requests - that would indicate elements
       // are duplicated somewhere.
       expect(Object.values(requested).some((v) => v > 1)).toBe(false);
+
+      // Priority on the outer edges of the viewport have a lower priority than the
+      // center. Higher priority numbers = lower priority.
+      
+      expect(priorities["0,0,3"]).toBeGreaterThan(priorities["0.2,0.2,3"]);
+      expect(priorities["0.7,0,3"]).toBeGreaterThan(priorities["0.5,0.2,3"]);
+      expect(priorities["0,0.7,3"]).toBeGreaterThan(priorities["0.2,0.5,3"]);
+      expect(priorities["0.7,0.7,3"]).toBeGreaterThan(priorities["0.5,0.5,3"]);
+
+      expect(priorities["0.2,0.2,3"]).toBeGreaterThan(priorities["0.4,0.4,3"]);
+      expect(priorities["0.5,0.2,3"]).toBeGreaterThan(priorities["0.4,0.4,3"]);
+      expect(priorities["0.2,0.5,3"]).toBeGreaterThan(priorities["0.4,0.4,3"]);
+      expect(priorities["0.5,0.5,3"]).toBeGreaterThan(priorities["0.4,0.4,3"]);
    });
    
    ///////////////////////////////////////////////////////////////////////////////////////

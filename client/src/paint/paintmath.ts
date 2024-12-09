@@ -11,6 +11,7 @@ export type CoordRect = [Coord, Coord, Coord, Coord];
 export type ElementLocation = {
    coords: CoordPair;
    level: number;
+   priority?: number;
 };
 
 //----------------------------------------------------------------------------------------
@@ -63,6 +64,35 @@ function alignRectToBlockGrid(
 }
 
 //-------------------------------------------------------------------------------------
+function computeElementPriority(location: CoordPair, level: number, origin: CoordPair): number {
+   // The closer to the origin, the higher the priority
+   // (lower number = higher priority).
+
+   // location += blockWidth / 2, and get difference from origin
+   // e.g., for level 0, add 1/16 (half of 1/8 units)
+   let x = location[0]
+      .add(new Coord(1, level + 4))
+      .sub(origin[0]);
+   let y = location[1]
+      .add(new Coord(1, level + 4))
+      .sub(origin[1]);
+
+   // Scale to 1/2 block units.
+   // divide by 1/2^((level+4)^2)
+   // or multiply by 2^((level+4)^2)
+   let scale = new Coord(BigInt(1) << BigInt((level+4)), 0);
+   scale = scale.mul(scale);
+
+   // result = x^2*scale + y^2*scale
+   x = x.mul(x).mul(scale);
+   y = y.mul(y).mul(scale);
+
+   // Truncate(16) is to avoid a situation where a lot of low-order/trash bits are
+   // messing with the desired precision.    
+   return x.add(y).truncate(16).toNumber();
+}
+
+//-------------------------------------------------------------------------------------
 // Builds a list of element locations that are touched by the current viewport.
 function getVisibleElementLocations(
    viewport: CoordRect,
@@ -78,6 +108,9 @@ function getVisibleElementLocations(
    const zero = new Coord("0");
    const one = new Coord("1");
 
+   const middleX = vLeft.add(vRight).div(2);
+   const middleY = vTop.add(vBottom).div(2);
+
    // We align the topleft corner of the viewport with the grid we are zoomed on.
    // Zoom 0 = truncate to 1/8 (64 pixel units over 512 pixel screen)
 
@@ -91,6 +124,7 @@ function getVisibleElementLocations(
          const location = {
             coords: [xc, yc] as CoordPair,
             level: zoomInt,
+            priority: computeElementPriority([xc, yc], zoomInt, [middleX, middleY]),
          };
          locations.push(location);
       }

@@ -234,7 +234,9 @@ export class PaintEngine {
 
    //-------------------------------------------------------------------------------------
    private getVisibleElementLocations() {
-      return PaintMath.getVisibleElementLocations(this.viewport, this.view.zoom);
+      const locations = PaintMath.getVisibleElementLocations(this.viewport, this.view.zoom);
+      locations.sort((a, b) => (a.priority || 0) - (b.priority || 0));
+      return locations;
    }
 
    //-------------------------------------------------------------------------------------
@@ -270,9 +272,41 @@ export class PaintEngine {
       return this.view;
    }
 
+   // //-------------------------------------------------------------------------------------
+   // computePriority(location: CoordPair, level: number): number {
+   //    // The closer to the origin, the higher the priority
+   //    // (lower number = higher priority).
+   //    const origin = this.view.position;
+
+   //    // location += blockWidth / 2
+   //    // e.g., for level 0, add 1/16 (half of 1/8 units)
+   //    // Get difference from origin.
+   //    let x = location[0]
+   //       .add(new Coord(1, level + 4))
+   //       .sub(origin[0]);
+   //    let y = location[1]
+   //       .add(new Coord(1, level + 4))
+   //       .sub(origin[1]);
+
+   //    // Scale to 1/2 block units.
+   //    const scale = new Coord(1, level + 4);
+   //    // result = x^2/scale + y^2/scale
+   //    x = x.mul(x).div(scale);
+   //    y = y.mul(y).div(scale);
+
+   //    // Truncate(16) is to avoid a situation where a lot of low-order/trash bits are
+   //    // messing with the desired precision.    
+   //    return x.add(y).truncate(16).toNumber();
+   // }
+
    //-------------------------------------------------------------------------------------
    renderElement(element: PaintElement) {
-      const block = this.blocks.getBlock(element.location.coords[0], element.location.coords[1], element.location.level + 3);
+      const block = this.blocks.getBlock(
+         element.location.coords[0],
+         element.location.coords[1],
+         element.location.level + 3,
+         element.location.priority,//this.computePriority(element.location.coords, element.location.level)
+      );
       if (!block) return;
       if (block == "pending") return;
 
@@ -311,6 +345,7 @@ export class PaintEngine {
 
       for (const location of locations) {
          const elem = this.getElement(location);
+         elem.location.priority = location.priority;
          if (elem.clearDirty() || this.repaintAll) {
             // <Update element image>
             this.renderElement(elem);
@@ -319,6 +354,16 @@ export class PaintEngine {
          if (!bufferCoords) continue; // Out of range.
          ctx?.putImageData(elem.image, bufferCoords[0] * 64, bufferCoords[1] * 64);
          
+         // {
+         //    const ct = (ctx as any).getCanvasContext();
+         //    const debugText = elem.location.priority?.toFixed(2);
+         //    const statusSize = ct.measureText(debugText);
+         //    ct.fillStyle = "white";
+         //    ct.fillRect(bufferCoords[0] * 64, bufferCoords[1] * 64, statusSize.width + 4, 12);
+         //    ct.fillStyle = "black";
+         //    ct.font = "11px sans-serif";
+         //    ct.fillText(debugText, bufferCoords[0] * 64, bufferCoords[1] * 64 + 12);
+         // }
       }
 
       // for (let y = 0; y < this.view.size[1] / 64 + 2; y++) {
