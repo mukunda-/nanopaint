@@ -3,6 +3,8 @@
 // Distributed under the MIT license. See LICENSE.txt for details.
 // ///////////////////////////////////////////////////////////////////////////////////////
 
+export type UnixMillis = number;
+
 //----------------------------------------------------------------------------------------
 export async function delayMillis(ms: number) {
    return await new Promise(resolve => setTimeout(resolve, ms));
