@@ -3,7 +3,7 @@
 // Distributed under the MIT license. See LICENSE.txt for details.
 // ///////////////////////////////////////////////////////////////////////////////////////
 import { Coord } from "./cmath2";
-import { ThrottlingBlockQueue, buildCoordString, parseCoordString } from "./blockqueue";
+import { ThrottlingBlockController, buildCoordString, parseCoordString } from "./blockcontroller";
 import { toBase64url } from "./base64";
 import { ApiClient } from "./apiclient";
 import { delayMillis } from "./common";
@@ -46,7 +46,7 @@ function TestApiClient() {
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
-describe("Blocks", () => {
+describe("BlockController", () => {
 
    ///////////////////////////////////////////////////////////////////////////////////////
    test("buildCoordString", () => {
@@ -99,7 +99,7 @@ describe("Blocks", () => {
       jest.useFakeTimers();
       const api = TestApiClient();
       const source = new ApiBlockSource(api);
-      const blocks = new ThrottlingBlockQueue(source);
+      const blocks = new ThrottlingBlockController(source);
 
       const eventHandler = jest.fn();
       blocks.subscribe(eventHandler);
@@ -116,7 +116,10 @@ describe("Blocks", () => {
       // After the delay, the block is fetched.
       await jest.advanceTimersByTimeAsync(100);
       expect(eventHandler).toHaveBeenCalledTimes(1);
-      expect(eventHandler).toHaveBeenCalledWith("block", expect.anything());
+      expect(eventHandler).toHaveBeenCalledWith({
+         type: "block",
+         address: expect.anything()
+      });
    });
 
    ///////////////////////////////////////////////////////////////////////////////////////
@@ -129,7 +132,7 @@ describe("Blocks", () => {
          }),
       };
 
-      const blocks = new ThrottlingBlockQueue(source);
+      const blocks = new ThrottlingBlockController(source);
       blocks.getBlock(new Coord(0), new Coord(0), 3);
       expect(source.getBlock).toHaveBeenLastCalledWith(hex64("0002"));
 

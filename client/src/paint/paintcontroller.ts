@@ -10,6 +10,7 @@ import { PaintEngine } from "./paintengine";
 //import * as Hammer from "hammerjs";
 import { PaintMath } from "./paintmath";
 
+//----------------------------------------------------------------------------------------
 export class PaintController {
    private engine: PaintEngine;
    private tool = "look";

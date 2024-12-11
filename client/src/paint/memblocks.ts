@@ -3,7 +3,7 @@
 // Distributed under the MIT license. See LICENSE.txt for details.
 // ///////////////////////////////////////////////////////////////////////////////////////
 
-import { Block, BlockSource, buildCoordString, parseCoordString } from "./blockqueue";
+import { Block, BlockSource, buildCoordString, parseCoordString } from "./blockcontroller";
 import { UnixMillis } from "./common";
 
 // Purpose: For prototyping, a client-side block store.
@@ -64,6 +64,7 @@ export class Memblocks implements BlockSource {
       return block;
    }
 
+   //-------------------------------------------------------------------------------------
    private bubbleColor(address: string) {
       const [coords, bits] = parseCoordString(address);
       if (bits <= 6) {

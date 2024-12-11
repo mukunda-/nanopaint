@@ -196,4 +196,19 @@ describe("PaintMath", () => {
          ).toBe("0.1,0.2,0.7,0.5");
       }
    });
+
+   ///////////////////////////////////////////////////////////////////////////////////////
+   test("Compute pixel scale", () => {
+      // At zoom level 0, the pixel scale is 512. That is, 512 pixels = 1.0 of the canvas.
+      // Each zoom integer reduces the scale by 1/2.
+      // Fractional zooms are allowed.
+      // Formula is 1 / 2^(zoom + 9)
+      expect(PaintMath.computePixelScale(0).toString()).toBe("0.001");
+      expect(PaintMath.computePixelScale(0.41503749927884381).toString()).toBe("0.0006");
+      expect(PaintMath.computePixelScale(1).toString()).toBe("0.0004");
+      for (let i = 0; i < 20; i++) {
+         expect(PaintMath.computePixelScale(4 + i * 3).toString())
+            .toBe(`0.0000${"0".repeat(i)}4`);
+      }
+   });
 });

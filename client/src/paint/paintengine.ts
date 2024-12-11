@@ -6,8 +6,8 @@
 // Purpose: painting/rendering engine.
 import { ApiBlockSource } from "./apiblocksource";
 import { DefaultApiClient } from "./apiclient";
-import { BlockEventArgs, BlockQueue, ThrottlingBlockQueue, BlockSource, buildCoordString, parseCoordString } from "./blockqueue";
-import { Coord } from "./cmath2";
+import { BlockEventArgs, BlockController, ThrottlingBlockController, BlockSource, buildCoordString, parseCoordString, BlockEvent } from "./blockcontroller";
+import { Cmath, Coord } from "./cmath2";
 import { PaintMath, ElementLocation, CoordRect, CoordPair } from "./paintmath";
 import { View } from "./paintmath";
 
@@ -83,24 +83,25 @@ export class PaintEngine {
    private elements: Record<string,PaintElement> = {};
    private imageDataFactory: ImageDataFactory;
    private repaintAll = true;
-   private blocks: BlockQueue;
+   private blocks: BlockController;
+   private minimumPaintGrid = 8;
 
    //-------------------------------------------------------------------------------------
    constructor(options: {
       renderBuffer: RenderBuffer,
       imageDataFactory?: ImageDataFactory,
       blockSource?: BlockSource,
-      blocks?: BlockQueue,
+      blocks?: BlockController,
    }) {
       this.renderBuffer = options.renderBuffer;
       this.imageDataFactory = options.imageDataFactory || ((width, height) => new ImageData(width, height));
       //this.blocks = new Blocks(new DefaultApiClient("localhost"));
-      this.blocks = options.blocks || new ThrottlingBlockQueue(
+      this.blocks = options.blocks || new ThrottlingBlockController(
          options.blockSource
          || new ApiBlockSource(new DefaultApiClient("")));
          
-      this.blocks.subscribe((event, args) => {
-         this.onBlockEvent(event, args);
+      this.blocks.subscribe((event) => {
+         this.onBlockEvent(event);
       });
       this.setView({});
    }
@@ -131,13 +132,13 @@ export class PaintEngine {
    }
 
    //-------------------------------------------------------------------------------------
-   private onBlockEvent(event: string, args: any) {
-      if (event == "block") {
+   private onBlockEvent(event: BlockEvent) {
+      if (event.type == "block") {
          // When a block is loaded, dirty any elements that it covers. This may be a
          // higher level block that dirties several underlying elements. Our elements only
          // exist at the bottommost level we are looking at.
-         args = args as BlockEventArgs;
-         const [location, bits] = parseCoordString(args.address);
+         
+         const [location, bits] = parseCoordString(event.address);
          this.markElementsDirtyAtLocation(location, bits);
       }
    }
@@ -254,7 +255,7 @@ export class PaintEngine {
       this.alignedViewport = PaintMath.alignRectToBlockGrid(this.viewport, this.view.zoom);
       //console.log(this.alignedViewport.map(c => c.toString()).join(","));
       this.repaintAll = true;
-      this.blocks.cancelPendingRequests();
+      this.blocks.cancelPendingReadRequests();
    }
 
    //-------------------------------------------------------------------------------------
@@ -307,8 +308,8 @@ export class PaintEngine {
          element.location.level + 3,
          element.location.priority,//this.computePriority(element.location.coords, element.location.level)
       );
-      if (!block) return;
-      if (block == "pending") return;
+      if (block == "out_of_bounds" || block == "pending") return;
+      // Out of bound is a logic error and should be reported?
 
       // <Update element image>
       const data = element.image.data;
@@ -375,5 +376,38 @@ export class PaintEngine {
       // }
 
       this.repaintAll = false;
+   }
+
+   //-------------------------------------------------------------------------------------
+   private pickLocation(x: number, y: number): [Coord, Coord] {
+      const viewport = this.getViewport();
+      return [
+         Cmath.lerp(viewport[0], viewport[2], x / this.view.size[0]),
+         Cmath.lerp(viewport[1], viewport[3], y / this.view.size[1]),
+      ];
+   }
+
+   //-------------------------------------------------------------------------------------
+   private getPaintLevel() {
+      let level = this.view.zoom + 3;
+      level = Math.floor(level - Math.log2(this.minimumPaintGrid));
+      level = Math.max(level, 9);
+      return Math.floor(level);
+   }
+
+   //-------------------------------------------------------------------------------------
+   paint(x: number, y: number, color: number) {
+      const location = this.pickLocation(x, y);
+      const level = this.getPaintLevel();
+
+      const address = buildCoordString(location, level);
+      if (!address) return;
+
+      this.blocks.paint
+      const zoom = Math.max(
+         Math.floor(this.view.zoom - 3),
+         0,
+      );
+      
    }
 }

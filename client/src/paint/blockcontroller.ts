@@ -8,7 +8,10 @@ import { delayMillis, yieldToEvents } from "./common";
 import { CoordPair } from "./paintmath";
 import { Throttler } from "./throttler";
 
-// Purpose: Caching block repository.
+// Purpose: The block controller handles requests to read and write to the block source.
+// The primary implementation is a "throttling" block store that avoids making too many
+// requests to the server at once.
+// The lower level clients do not need to worry about throttling.
 
 const THROTTLE_PERIOD = 100;
 const THROTTLE_BURST = 10;
@@ -51,6 +54,18 @@ export function buildCoordString(coords: CoordPair, bits: number): string|undefi
 }
 
 //----------------------------------------------------------------------------------------
+// Extract the lowest 6 bits of the coordinate pair and mix them together for a pixel
+// index.
+export function getPixelIndex(coords: CoordPair, bits: number): number {
+   if (bits < 9) throw new Error("invalid pixel address");
+   const x = Number(coords[0].truncate(bits).value & BigInt(0o77));
+   const y = Number(coords[1].truncate(bits).value & BigInt(0o77));
+   return x + y * 64;
+}
+
+//----------------------------------------------------------------------------------------
+// Extract the coordinates and bit length from an encoded address string.
+// Reverse of buildCoordString.
 export function parseCoordString(address: string): [CoordPair, number] {
    const bytes = fromBase64url(address);
    const bitmod = bytes[bytes.length - 1] & 0x3;
@@ -76,21 +91,39 @@ export type Block = {
 };
 
 //----------------------------------------------------------------------------------------
-type GetBlockResult = Block | "pending" | undefined;
+type GetBlockResult = Block | "pending" | "out_of_bounds";
+type PaintResult = "pixel_is_dry" | "pending" | "out_of_bounds";
+
+//----------------------------------------------------------------------------------------
+// Descriptive types are better than primitives.
+type BlockAddress = string; // An encoded address that points to a block.
+type PixelAddress = string; // An encoded address that points to a pixel within a block 
+                            // (6 more bits than a block).
+type Color = number; // A 12 bit color, 4 bits per component, R being the lower order.
+type RequestId = number; // An incrementing session-unique ID.
 
 //----------------------------------------------------------------------------------------
 type Request = {
-   rid: number;
-   address: string;
+   rid: RequestId;
+   address: BlockAddress;
    priority: number;
    fulfill: () => Promise<void>;
    status: "pending" | "fetching";
 };
 
 //----------------------------------------------------------------------------------------
+// Events definitions
+export type BlockEvent = BlockLoadedEvent;
+
+export type BlockLoadedEvent = {
+   type: "block";
+   address: string;
+};
+
+//----------------------------------------------------------------------------------------
 // Consumers can subscribe to block events, such as when a block is loaded. Useful for
 // updating pixel regions when new data is available.
-type BlockEventHandler = (event: string, args: any) => void;
+type BlockEventHandler = (event: BlockEvent) => void;
 
 //----------------------------------------------------------------------------------------
 export interface BlockSource {
@@ -104,15 +137,32 @@ export type BlockEventArgs = {
 };
 
 //----------------------------------------------------------------------------------------
-export interface BlockQueue {
+export interface BlockController {
+   //-------------------------------------------------------------------------------------
+   // Consumers can listen to events from the queue, such as when a block loads or when
+   // a pixels are painted. These events are useful to manage updates to the screen.
    subscribe(handler: BlockEventHandler): void;
    unsubscribe(handler: BlockEventHandler): void;
-   cancelPendingRequests(): void;
+
+   //-------------------------------------------------------------------------------------
+   // Read requests can be invalidated if they are no longer needed. This will not cancel
+   // in-flight requests, but it will cancel any pending read requests so that a new set
+   // can be queued instead without waiting for the old one.
+   cancelPendingReadRequests(): void;
+
+   //-------------------------------------------------------------------------------------
+   // Fetches a block. An event will trigger when the block is loaded, or the block can
+   // be returned directly from a cache.
    getBlock(x: Coord, y: Coord, level: number, priority?: number): GetBlockResult;
+
+   //-------------------------------------------------------------------------------------
+   // Sets a pixel. A sane implementation will update the cache locally before sending
+   // the request to the server, so the UI can update immediately.
+   paint(x: Coord, y: Coord, level: number, color: number): PaintResult;
 }
 
 //----------------------------------------------------------------------------------------
-export class ThrottlingBlockQueue {
+export class ThrottlingBlockController implements BlockController {
    nextRid = 0;
    blocks: Record<string, Block> = {};
    requests: Record<string, Request> = {};
@@ -145,9 +195,9 @@ export class ThrottlingBlockQueue {
    }
 
    //-------------------------------------------------------------------------------------
-   private async notify(event: string, args: any) {
+   private async notify(event: BlockEvent) {
       for (const handler of this.callbacks) {
-         handler(event, args);
+         handler(event);
       }
    }
 
@@ -231,7 +281,10 @@ export class ThrottlingBlockQueue {
                // }
                this.blocks[address] = block;
                // console.log("filfulled", priority);
-               this.notify("block", { address });
+               this.notify({
+                  type: "block",
+                  address: address
+               });
             } catch (err) {
                console.error("Failed to fetch block:", err);
                return;
@@ -240,8 +293,12 @@ export class ThrottlingBlockQueue {
       );
    }
 
+   private async requestPaint(address: PixelAddress, color: Color) {
+      
+   }
+
    //-------------------------------------------------------------------------------------
-   async cancelPendingRequests() {
+   async cancelPendingReadRequests() {
       // Remove any pending requests. This is useful when the camera pans and we don't
       // want off-screen requests being fulfilled anymore. Any in-progress requests will
       // still complete. Newer requests will be made from the updated position.
@@ -258,16 +315,8 @@ export class ThrottlingBlockQueue {
    
    //-------------------------------------------------------------------------------------
    getBlock(x: Coord, y: Coord, level: number, priority?: number): GetBlockResult {
-      if (x.value < 0 || y.value < 0) return undefined;
-      if (
-         x.value >> BigInt(x.point) >= BigInt(1) ||
-         y.value >> BigInt(y.point) >= BigInt(1)
-      ) {
-         return undefined;
-      }
-
       const address = buildCoordString([x, y], level);
-      if (!address) return undefined;
+      if (!address) return "out_of_bounds";
 
       if (this.blocks[address]) {
          // Block is loaded already.
@@ -276,6 +325,27 @@ export class ThrottlingBlockQueue {
 
       // Make a request.
       this.requestBlock(address, priority || 0);
+      return "pending";
+   }
+
+   //-------------------------------------------------------------------------------------
+   paint(x: Coord, y: Coord, level: number, color: number): PaintResult {
+      // Pixel addresses require 9 bits at minimum.
+      if (level < 9) return "out_of_bounds";
+
+      const blockAddress = buildCoordString([x, y], level - 3);
+      if (!blockAddress) return "out_of_bounds";
+
+      if (this.blocks[blockAddress]) {
+         const pixelIndex = getPixelIndex([x, y], level);
+         const pixel = this.blocks[blockAddress].pixels[pixelIndex];
+         if (pixel & 0x40000000) {
+            return "pixel_is_dry";
+         }
+         this.blocks[blockAddress].pixels[pixelIndex] = (pixel & 0xFFFF) | color;
+         return "pending";
+      }
+
       return "pending";
    }
 }

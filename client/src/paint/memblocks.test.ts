@@ -3,7 +3,7 @@
 // Distributed under the MIT license. See LICENSE.txt for details.
 // ///////////////////////////////////////////////////////////////////////////////////////
 
-import { buildCoordString } from "./blockqueue";
+import { buildCoordString } from "./blockcontroller";
 import { Coord } from "./cmath2";
 import { Memblocks } from "./memblocks";
 

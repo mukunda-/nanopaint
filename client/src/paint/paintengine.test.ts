@@ -5,6 +5,7 @@
 
 import { Checkerblocks } from "./checkerblocks";
 import { Coord } from "./cmath2";
+import { yieldToEvents } from "./common";
 import { PaintEngine } from "./paintengine";
 import { TestRenderBuffer } from "./testrenderbuffer";
 
@@ -41,7 +42,7 @@ describe("PaintEngine", () => {
       expect(renderBuffer.getContext().putImageData).toHaveBeenCalledTimes(64);
 
       // Yield to the event loop to allow block requests to complete.
-      await new Promise((resolve) => setImmediate(resolve));
+      await yieldToEvents();
 
       jest.clearAllMocks();
       engine.setView({
@@ -90,12 +91,14 @@ describe("PaintEngine", () => {
       const blocks = {
          subscribe: jest.fn(),
          unsubscribe: jest.fn(),
-         cancelPendingRequests: jest.fn(),
+         cancelPendingReadRequests: jest.fn(),
          getBlock: jest.fn().mockImplementation((x: Coord, y: Coord, level: number, priority?: number) => {
             const index = `${x},${y},${level}`;
             requested[index] = (requested[index] || 0) + 1;
             priorities[index] = priority || 0;
+            return "pending";
          }),
+         paint: jest.fn()
       };
 
       const engine = new PaintEngine({
@@ -158,7 +161,7 @@ describe("PaintEngine", () => {
 
       // Yield to the event loop so the pending block requests complete.
       // Checkerblocks will fulfill immediately.
-      await new Promise((resolve) => setImmediate(resolve));
+      await yieldToEvents();
 
       jest.clearAllMocks();
       engine.setView({});

@@ -6,7 +6,7 @@
 // Purpose: For prototyping, a read-only block source that provides the Mandelbrot set.
 // Also very fun :)
 
-import { Block, BlockSource, parseCoordString } from "./blockqueue";
+import { Block, BlockSource, parseCoordString } from "./blockcontroller";
 import { Coord } from "./cmath2";
 
 function mandel(x: Coord, y: Coord): number {

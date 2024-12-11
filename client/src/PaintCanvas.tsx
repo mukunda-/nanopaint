@@ -8,6 +8,7 @@ import { PaintController } from './paint/paintcontroller';
 import { CanvasRenderBuffer } from './paint/renderbuffer';
 import { Checkerblocks } from './paint/checkerblocks';
 import { Mandelblocks } from './paint/mandelblocks';
+import { Memblocks } from './paint/memblocks';
 
 //----------------------------------------------------------------------------------------
 interface MyRenderBuffer {
@@ -18,6 +19,7 @@ interface MyRenderBuffer {
 export function PaintCanvas(props: {
    width: number,
    height: number,
+   tool: string,
 }) {
    const engineRef = useRef<PaintEngine | null>(null);
    const captured = useRef(false);
@@ -66,7 +68,7 @@ export function PaintCanvas(props: {
       engineRef.current = new PaintEngine({
          renderBuffer: new CanvasRenderBuffer(props.width, props.height),
          imageDataFactory: (w, h) => new ImageData(w, h),
-         blockSource: new Mandelblocks(),
+         blockSource: new Memblocks(),
       });
       controllerRef.current = new PaintController(engineRef.current, canvasRef.current);
       
@@ -85,10 +87,21 @@ export function PaintCanvas(props: {
       return releaseCanvas;
    }, []);
 
+   //-------------------------------------------------------------------------------------
+   useEffect(() => {
+      controllerRef.current?.setTool(props.tool);
+   }, [props.tool, controllerRef.current]);
+
+   let cursor = "default";
+   if (props.tool === 'paint') cursor = 'crosshair';
+   if (props.tool === 'look') cursor = 'grab';
+   if (props.tool === 'grab') cursor = 'grabbing';
+
    return <canvas
       width={props.width}
       height={props.height}
       className="border-2 border-gray-200"
       ref={canvasRef}
+      style={{ cursor }}
    />;
 }

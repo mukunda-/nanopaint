@@ -4,7 +4,7 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 
 import { toBase64url } from "./base64";
-import { Block, BlockSource } from "./blockqueue";
+import { Block, BlockSource } from "./blockcontroller";
 
 // Purpose: For testing, a read-only block source that returns a checkerboard pattern.
 
