@@ -4,10 +4,9 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 
 import { ApiClient } from "./apiclient";
-import { Block, BlockSource } from "./blockcontroller";
+import { Block, BlockSource, PaintStatus } from "./blockcontroller";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function decodePixels(data: string, output: Uint32Array) {
+function decodePixels(_data: string, _output: Uint32Array) {
    // todo.
 }  
 
@@ -26,10 +25,12 @@ export class ApiBlockSource implements BlockSource {
 
       const block: Block = {
          pixels: new Uint32Array(64*64),
+         revision: 1,
       };
       
       if (resp.code == "BLOCK") {
          decodePixels(resp.pixels, block.pixels);
+         block.revision = resp.revision;
          return block;
       } else if (resp.code == "NOT_FOUND") {
          // Server does not have anything saved for this address. Return an empty block.
@@ -37,5 +38,10 @@ export class ApiBlockSource implements BlockSource {
       } else {
          throw new Error("block api failed: " + resp.code);
       }
+   }
+   
+   
+   async paint(_address: string, _color: number): Promise<PaintStatus> {
+      throw new Error("not implemented yet");
    }
 }

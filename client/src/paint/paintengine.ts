@@ -4,9 +4,10 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 
 // Purpose: painting/rendering engine.
+
 import { ApiBlockSource } from "./apiblocksource";
 import { DefaultApiClient } from "./apiclient";
-import { BlockEventArgs, BlockController, ThrottlingBlockController, BlockSource, buildCoordString, parseCoordString, BlockEvent } from "./blockcontroller";
+import { BlockController, ThrottlingBlockController, BlockSource, buildCoordString, parseCoordString, BlockEvent } from "./blockcontroller";
 import { Cmath, Coord } from "./cmath2";
 import { PaintMath, ElementLocation, CoordRect, CoordPair } from "./paintmath";
 import { View } from "./paintmath";
@@ -403,7 +404,6 @@ export class PaintEngine {
       const address = buildCoordString(location, level);
       if (!address) return;
 
-      this.blocks.paint
       const zoom = Math.max(
          Math.floor(this.view.zoom - 3),
          0,

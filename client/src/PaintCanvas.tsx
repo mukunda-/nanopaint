@@ -6,8 +6,6 @@ import React, { useEffect, useRef } from 'react';
 import { PaintEngine } from './paint/paintengine';
 import { PaintController } from './paint/paintcontroller';
 import { CanvasRenderBuffer } from './paint/renderbuffer';
-import { Checkerblocks } from './paint/checkerblocks';
-import { Mandelblocks } from './paint/mandelblocks';
 import { Memblocks } from './paint/memblocks';
 
 //----------------------------------------------------------------------------------------

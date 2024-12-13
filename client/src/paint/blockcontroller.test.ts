@@ -6,7 +6,7 @@ import { Coord } from "./cmath2";
 import { ThrottlingBlockController, buildCoordString, parseCoordString } from "./blockcontroller";
 import { toBase64url } from "./base64";
 import { ApiClient } from "./apiclient";
-import { delayMillis } from "./common";
+import { delayMillis, yieldToEvents } from "./common";
 import { CoordPair } from "./paintmath";
 import { ApiBlockSource } from "./apiblocksource";
 
@@ -26,7 +26,7 @@ function hex64(hex: string): string {
 //////////////////////////////////////////////////////////////////////////////////////////
 function TestApiClient() {
    const client: ApiClient = {
-      getBlock: jest.fn().mockImplementation(async (blockAddress: string) => {
+      getBlock: jest.fn().mockImplementation(async (_blockAddress: string) => {
          await delayMillis(50);
          return {
             code: "BLOCK",
@@ -35,7 +35,7 @@ function TestApiClient() {
          };
       }),
 
-      paint: jest.fn().mockImplementation(async (pixelAddress: string, color: number) => {
+      paint: jest.fn().mockImplementation(async (_pixelAddress: string, _color: number) => {
          return {
             code: "PIXEL_SET",
          };
@@ -95,6 +95,14 @@ describe("BlockController", () => {
    });
 
    ///////////////////////////////////////////////////////////////////////////////////////
+   async function yieldToEventsWithFakeTimers() {
+      // yieldToEvents won't return until the time advances. Fake timers needs us to move
+      // the clock.
+      void jest.advanceTimersByTimeAsync(1);
+      await yieldToEvents();
+   }
+
+   ///////////////////////////////////////////////////////////////////////////////////////
    test("Subscribing to events", async () => {
       jest.useFakeTimers();
       const api = TestApiClient();
@@ -105,9 +113,11 @@ describe("BlockController", () => {
       blocks.subscribe(eventHandler);
       
       // When a new block is requested, the status is "pending".
-      expect(blocks.getBlock(new Coord("0"), new Coord("0"), 0)).toBe("pending");
+      expect(blocks.getBlock(new Coord(0), new Coord(0), 3)).toBe("pending");
+      await yieldToEventsWithFakeTimers();
       expect(api.getBlock).toHaveBeenCalledTimes(1);
-      expect(blocks.getBlock(new Coord("0"), new Coord("0"), 0)).toBe("pending");
+      expect(blocks.getBlock(new Coord(0), new Coord(0), 3)).toBe("pending");
+      await yieldToEventsWithFakeTimers();
       // Does not make additional calls within the same period.
       expect(api.getBlock).toHaveBeenCalledTimes(1);
 
@@ -123,32 +133,45 @@ describe("BlockController", () => {
    });
 
    ///////////////////////////////////////////////////////////////////////////////////////
-   test("Address translation", () => {
+   test("Address translation", async () => {
       const source = {
          getBlock: jest.fn().mockImplementation(async (address: string) => {
             return {
                pixels: new Uint32Array(64*64),
             };
          }),
+         paint: jest.fn(),
       };
 
       const blocks = new ThrottlingBlockController(source);
       blocks.getBlock(new Coord(0), new Coord(0), 3);
+      await yieldToEvents();
+      expect(source.getBlock).toHaveBeenCalledTimes(1);
       expect(source.getBlock).toHaveBeenLastCalledWith(hex64("0002"));
 
       blocks.getBlock(new Coord(0.125), new Coord(0), 3);
+      await yieldToEvents();
+      expect(source.getBlock).toHaveBeenCalledTimes(2);
       expect(source.getBlock).toHaveBeenLastCalledWith(hex64("0202"));
 
       blocks.getBlock(new Coord(0.5), new Coord(0.125), 3);
+      await yieldToEvents();
+      expect(source.getBlock).toHaveBeenCalledTimes(3);
       expect(source.getBlock).toHaveBeenLastCalledWith(hex64("2802"));
 
       blocks.getBlock(new Coord(0.625), new Coord(0.750), 3);
+      await yieldToEvents();
+      expect(source.getBlock).toHaveBeenCalledTimes(4);
       expect(source.getBlock).toHaveBeenLastCalledWith(hex64("ca02"));
 
       blocks.getBlock(new Coord(0.625), new Coord(0.750), 4);
+      await yieldToEvents();
+      expect(source.getBlock).toHaveBeenCalledTimes(5);
       expect(source.getBlock).toHaveBeenLastCalledWith(hex64("ca03"));
 
       blocks.getBlock(new Coord(0.625), new Coord(0.750), 5);
+      await yieldToEvents();
+      expect(source.getBlock).toHaveBeenCalledTimes(6);
       expect(source.getBlock).toHaveBeenLastCalledWith(hex64("ca0000"));
 
    });

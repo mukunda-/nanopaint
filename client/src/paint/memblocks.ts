@@ -3,7 +3,7 @@
 // Distributed under the MIT license. See LICENSE.txt for details.
 // ///////////////////////////////////////////////////////////////////////////////////////
 
-import { Block, BlockSource, buildCoordString, parseCoordString } from "./blockcontroller";
+import { Block, BlockSource, buildCoordString, PaintStatus, parseCoordString } from "./blockcontroller";
 import { UnixMillis } from "./common";
 
 // Purpose: For prototyping, a client-side block store.
@@ -40,6 +40,7 @@ function getPixelIndex(address: string): number {
 type MemBlock = {
    pixels: Uint32Array;
    dryTime: UnixMillis;
+   revision: number;
 };
 
 //----------------------------------------------------------------------------------------
@@ -51,6 +52,7 @@ export class Memblocks implements BlockSource {
       this.blocks[address] ||= {
          pixels: new Uint32Array(64*64),
          dryTime: 0,
+         revision: 1,
       };
       return this.blocks[address];
    }
@@ -59,14 +61,17 @@ export class Memblocks implements BlockSource {
    async getBlock(address: string): Promise<Block> {
       const block = this.blocks[address];
       if (!block) {
-         return { pixels: new Uint32Array(64*64) };
+         return {
+            pixels: new Uint32Array(64*64),
+            revision: 1,
+         };
       }
       return block;
    }
 
    //-------------------------------------------------------------------------------------
    private bubbleColor(address: string) {
-      const [coords, bits] = parseCoordString(address);
+      const [_coords, bits] = parseCoordString(address);
       if (bits <= 6) {
          return; // At the top level.
       }
@@ -135,12 +140,13 @@ export class Memblocks implements BlockSource {
          return; // No change, stop the bubble.
       }
       parentBlock.pixels[parentPixelIndex] = (upperPixelValue & 0xFFFF0000) | computed;
+      parentBlock.revision++;
 
       this.bubbleColor(parentPixelAddress);
    }
 
    //-------------------------------------------------------------------------------------
-   async paint(address: string, color: number): Promise<void> {
+   async paint(address: string, color: number): Promise<PaintStatus> {
       if (color > 0xFFF) throw new Error("invalid color");
       const blockAddress = getBlockAddress(address);
 
@@ -148,11 +154,14 @@ export class Memblocks implements BlockSource {
       const index = getPixelIndex(address);
 
       if (block.pixels[index] & PIXEL_DRY) {
-         return;
+         return "dry";
       }
       block.pixels[index] |= PIXEL_SET | (color << 16);
       block.dryTime = Date.now() + DRY_TIME;
+      block.revision++;
 
       this.bubbleColor(address);
+      
+      return "ok";
    }
 }

@@ -172,7 +172,9 @@ function getBufferDrawPosition(
 }*/
 
 //----------------------------------------------------------------------------------------
-function computePixelScale(zoom: number) {
+// Compute the pixel scale for a given zoom level. Pixel scale is (1/512) / 2^zoom.
+// TODO: should it be fixed at 512?
+function computePixelScale(zoom: number): Coord {
    // Compute the fractional scale (between powers of two), and then we'll shift those
    // bits over to the real scale.
    const zoomInt = Math.floor(zoom);

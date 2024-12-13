@@ -6,7 +6,7 @@
 // Purpose: For prototyping, a read-only block source that provides the Mandelbrot set.
 // Also very fun :)
 
-import { Block, BlockSource, parseCoordString } from "./blockcontroller";
+import { Block, BlockSource, PaintStatus, parseCoordString } from "./blockcontroller";
 import { Coord } from "./cmath2";
 
 function mandel(x: Coord, y: Coord): number {
@@ -52,11 +52,13 @@ export class Mandelblocks implements BlockSource {
       }
 
       return {
-         pixels
+         pixels,
+         revision: 1, // Static revision.
       };
    }
 
-   async paint(address: string, color: number): Promise<void> {
+   async paint(address: string, color: number): Promise<PaintStatus> {
       // not implemented.
+      throw new Error("not supported");
    }
 }

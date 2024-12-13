@@ -4,7 +4,7 @@
 // ///////////////////////////////////////////////////////////////////////////////////////
 
 import { toBase64url } from "./base64";
-import { Block, BlockSource } from "./blockcontroller";
+import { Block, BlockSource, PaintStatus } from "./blockcontroller";
 
 // Purpose: For testing, a read-only block source that returns a checkerboard pattern.
 
@@ -24,11 +24,13 @@ export class Checkerblocks implements BlockSource {
       }
 
       return {
-         pixels
+         pixels,
+         revision: 1, // Static revision.
       };
    }
 
-   async paint(address: string, color: number): Promise<void> {
+   async paint(address: string, color: number): Promise<PaintStatus> {
       // not implemented.
+      throw new Error("not supported");
    }
 }
